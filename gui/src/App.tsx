@@ -32,7 +32,14 @@ export default function App() {
         </div>
       )}
       {route.name === "start" && <StartPage />}
-      {route.name === "task" && <Workspace key={`${route.task}-${route.mode}`} taskKey={route.task} mode={route.mode} />}
+      {route.name === "task" && (
+        <Workspace
+          key={`${route.task}-${route.mode}-${route.testSet}`}
+          taskKey={route.task}
+          mode={route.mode}
+          testSet={route.testSet}
+        />
+      )}
       {route.name === "results" && <ResultsView key={route.runId} runId={route.runId} />}
       {route.name === "runs" && <RecentRuns task={route.task} />}
     </>

@@ -31,7 +31,7 @@ export function AppHeader({ accent }: { accent?: string }) {
           className="flex min-h-11 items-center gap-2.5 rounded-md text-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
         >
           <FanLogo className="size-8" />
-          <span className="font-heading text-xl font-bold tracking-[-0.02em] text-foreground">FigureUS(out)</span>
+          <span className="font-heading text-xl font-bold tracking-[-0.02em] text-brand">FigureUS(out)</span>
           <span className="sr-only">: back to the tasks</span>
         </a>
         <a

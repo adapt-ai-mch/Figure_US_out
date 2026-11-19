@@ -5,7 +5,7 @@ import { isTaskKey, type TaskKey } from "@/lib/tasks"
 
 export type Route =
   | { name: "start" }
-  | { name: "task"; task: TaskKey; mode: "standard" | "fgr" | null }
+  | { name: "task"; task: TaskKey; mode: "standard" | "fgr" | null; testSet: "internal" | "external" | null }
   | { name: "results"; runId: string }
   | { name: "runs"; task: TaskKey | null }
 
@@ -13,8 +13,15 @@ function parse(hash: string): Route {
   const [path, query = ""] = hash.replace(/^#/, "").split("?")
   const parts = path.split("/").filter(Boolean)
   if (parts[0] === "task" && isTaskKey(parts[1])) {
-    const mode = new URLSearchParams(query).get("mode")
-    return { name: "task", task: parts[1], mode: mode === "standard" || mode === "fgr" ? mode : null }
+    const params = new URLSearchParams(query)
+    const mode = params.get("mode")
+    const test = params.get("test")
+    return {
+      name: "task",
+      task: parts[1],
+      mode: mode === "standard" || mode === "fgr" ? mode : null,
+      testSet: test === "internal" || test === "external" ? test : null,
+    }
   }
   if (parts[0] === "results" && parts[1]) return { name: "results", runId: parts[1] }
   if (parts[0] === "runs") return { name: "runs", task: isTaskKey(parts[1]) ? parts[1] : null }

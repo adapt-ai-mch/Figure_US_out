@@ -1,6 +1,6 @@
 // The start page: the image-stream hero, FigureUS(out), and one liquid-glass button per task.
-import { useSyncExternalStore } from "react"
-import { CalendarRange, ChevronDown, FileSpreadsheet, History, User } from "lucide-react"
+import { useSyncExternalStore, type SVGProps } from "react"
+import { Building2, ChevronDown, Globe, History } from "lucide-react"
 
 import { FanLogo } from "@/components/app-chrome"
 import { DropdownNavigation, type NavItem } from "@/components/ui/dorpdown-navigation"
@@ -10,38 +10,45 @@ import { href } from "@/lib/router"
 import { TASKS, type TaskKey } from "@/lib/tasks"
 import { cn } from "@/lib/utils"
 
-// What each task's dropdown offers once its liquid-glass button is clicked.
+// Test-set icons in the test-set colours: navy = Internal Test, ochre = External Test.
+const InternalIcon = (props: SVGProps<SVGSVGElement>) => <Building2 {...props} style={{ color: "var(--internal)" }} />
+const ExternalIcon = (props: SVGProps<SVGSVGElement>) => <Globe {...props} style={{ color: "var(--external)" }} />
+
+type Mode = "standard" | "fgr"
+
+/** Internal and External test set, each opening the task with that test set already chosen. */
+function testSets(task: TaskKey, mode?: Mode) {
+  const link = (test: "internal" | "external") =>
+    href(`/task/${task}?${mode ? `mode=${mode}&` : ""}test=${test}`)
+  return [
+    { label: "Internal test set", description: "Titled Internal Test", icon: InternalIcon, href: link("internal") },
+    { label: "External test set", description: "Titled External Test", icon: ExternalIcon, href: link("external") },
+  ]
+}
+
 const recent = (task: TaskKey) => ({
   title: "Results",
-  items: [{ label: "Open a recent run", description: "Results saved on this computer", icon: History, href: href(`/runs/${task}`) }],
+  items: [{ label: "Open a recent run", description: "Saved on this computer", icon: History, href: href(`/runs/${task}`) }],
 })
 
-const evaluate = (task: TaskKey, needs: string) => ({
-  title: "Evaluate",
-  items: [{ label: "Choose the predictions CSV", description: needs, icon: FileSpreadsheet, href: href(`/task/${task}`) }],
-})
-
+// What each task's dropdown offers once its liquid-glass button is clicked.
 const TASK_MENUS: Record<TaskKey, NavItem["subMenus"]> = {
   classification: [
-    {
-      title: "Evaluate",
-      items: [
-        { label: "Standard", description: "One prediction per participant", icon: User, href: href("/task/classification?mode=standard") },
-        { label: "FGR", description: "One per scan, record_id like 001_32+5", icon: CalendarRange, href: href("/task/classification?mode=fgr") },
-      ],
-    },
+    { title: "Standard", items: testSets("classification", "standard") },
+    { title: "FGR", items: testSets("classification", "fgr") },
     recent("classification"),
   ],
-  regression: [evaluate("regression", "record_id, true, pred"), recent("regression")],
-  detection: [evaluate("detection", "record_id, true_xml, pred_xml; optional video_path"), recent("detection")],
-  segmentation: [evaluate("segmentation", "record_id, true_mask, pred_mask; optional image"), recent("segmentation")],
+  regression: [{ title: "Evaluate", items: testSets("regression") }, recent("regression")],
+  detection: [{ title: "Evaluate", items: testSets("detection") }, recent("detection")],
+  segmentation: [{ title: "Evaluate", items: testSets("segmentation") }, recent("segmentation")],
 }
 
 // One dropdown per task; the id maps back to TASKS (id - 1).
 const NAV_ITEMS: NavItem[] = TASKS.map((t, i) => ({ id: i + 1, label: t.label, subMenus: TASK_MENUS[t.key] }))
 
-// Figures and ultrasound-style frames that FigureUS(out) itself produces, made from
-// synthetic data only (no study data). Bundled in public/hero so the app works offline.
+// Plots FigureUS(out) made from synthetic data, and three example ultrasound frames
+// (segmentation overlay, detection boxes, fetal head) with no identifying text or file metadata.
+// Bundled in public/hero so the app works offline.
 const HERO_IMAGES: StreamImage[] = Array.from({ length: 9 }, (_, i) => ({
   src: `/hero/card_${String(i + 1).padStart(2, "0")}.jpg`,
 }))
@@ -82,12 +89,11 @@ export function StartPage() {
         <div className="relative z-10 flex h-full flex-col items-center justify-between gap-44 px-6 py-11 text-center sm:gap-6">
           <div className="flex flex-col items-center gap-3">
             <FanLogo className="size-14 text-primary" />
-            <h1 className="font-heading text-[clamp(2.6rem,7.5vw,6.5rem)] font-bold leading-[0.98] tracking-[-0.03em] text-foreground">
+            <h1 className="font-heading text-[clamp(2.6rem,7.5vw,6.5rem)] font-bold leading-[0.98] tracking-[-0.03em] text-brand">
               FigureUS(out)
             </h1>
-            <p className="max-w-[52ch] text-balance text-lg text-foreground/90">
-              Evaluate saved ultrasound model predictions on this computer. evaluate.py calculates every number,
-              and nothing leaves the computer.
+            <p className="-mt-1 text-balance font-heading text-[clamp(1.15rem,2.2vw,1.6rem)] italic tracking-[-0.005em] text-primary">
+              because every model has a story to plot...
             </p>
           </div>
 

@@ -26,14 +26,23 @@ function reveal(id: string) {
   }, 60)
 }
 
-export function Workspace({ taskKey, mode }: { taskKey: TaskKey; mode: Setup["mode"] }) {
+export function Workspace({
+  taskKey,
+  mode,
+  testSet,
+}: {
+  taskKey: TaskKey
+  mode: Setup["mode"]
+  /** Chosen in the start page menu; still changeable in the set-up step. */
+  testSet: Setup["test_set"]
+}) {
   const task = TASK_BY_KEY[taskKey]
   const [job, setJob] = useState<Job | null>(null)
   const [csv, setCsv] = useState<string | null>(null)
   const [summary, setSummary] = useState<CsvSummary | null>(null)
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [participant, setParticipant] = useState("")
-  const [setup, setSetup] = useState<Setup>(() => emptySetup(mode))
+  const [setup, setSetup] = useState<Setup>(() => emptySetup(mode, testSet))
   const [labels, setLabels] = useState<{ col: string; values: string[] | null } | null>(null)
   const [check, setCheck] = useState<{ key: string; view: RunView } | null>(null)
   const [revealed, setRevealed] = useState<Set<string>>(new Set())
@@ -180,8 +189,16 @@ export function Workspace({ taskKey, mode }: { taskKey: TaskKey; mode: Setup["mo
   return (
     <Page accent={accent}>
       <div className="mb-10 flex flex-col gap-2">
+        {setup.test_set && (
+          <p className="text-[15px] font-semibold" style={{ color: accent }}>
+            {TEST_SET[setup.test_set].label}
+          </p>
+        )}
         <h1 className="font-heading text-[clamp(2rem,4.5vw,3rem)] font-bold leading-tight tracking-[-0.02em]">
           {task.label}
+          {taskKey === "classification" && setup.mode && (
+            <span className="text-muted-foreground"> ({setup.mode === "fgr" ? "FGR" : "Standard"})</span>
+          )}
         </h1>
         <p className="max-w-[64ch] text-[17px] text-foreground/80">
           {task.reports} evaluate.py calculates every number on this computer; this page shows what it saved.

@@ -22,6 +22,7 @@
  * 6. Sub-item contents are block-styled <span>s instead of <div>/<p>, so they are valid
  *    inside a <button> as well as an <a>. They look the same. Each item also carries an
  *    aria-label ("label: description") so screen readers announce both lines.
+ * 7. The menu panel is left-aligned, so it reads the same inside a centred container.
  *
  * The look and the framer-motion animations (shared "hover-bg" and "menu" layout ids,
  * chevron rotation) are unchanged.
@@ -190,7 +191,7 @@ export function DropdownNavigation({
                     )}
                   >
                     <motion.div
-                      className="bg-background border border-border p-4 w-max max-w-[calc(100vw-3rem)]"
+                      className="bg-background border border-border p-4 w-max max-w-[calc(100vw-3rem)] text-left"
                       style={{ borderRadius: 16 }}
                       layoutId="menu"
                     >

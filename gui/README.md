@@ -26,7 +26,7 @@ Vite + React 19 + TypeScript, Tailwind CSS v4, shadcn (components in `src/compon
 | `src/lib/tasks.ts` | The four tasks, their columns, display names for metrics |
 | `src/lib/router.ts` | A small hash router |
 | `src/index.css` | Tailwind, shadcn theme with the FigureUS(out) palette, local fonts |
-| `public/hero/card_01.jpg` … `card_09.jpg` | Hero images: plots and ultrasound-style frames made by FigureUS(out) from **synthetic data only** |
+| `public/hero/card_01.jpg` … `card_09.jpg` | Hero images: plots made by FigureUS(out) from **synthetic data**, and three example ultrasound frames (`card_02` segmentation overlay, `card_05` detection boxes, `card_08` fetal head) re-saved without file metadata and with scanner text trimmed |
 
 Why `src/components/ui`: shadcn installs every component there, and the supplied components import from `@/components/ui/...` and `@/lib/utils`. Keeping that folder means future `npx shadcn add …` components drop in without changing imports.
 

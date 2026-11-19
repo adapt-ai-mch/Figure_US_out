@@ -192,7 +192,12 @@ function ResultsBody({ view, results }: { view: RunView; results: Results }) {
       </section>
 
       <div className="flex flex-wrap gap-3 border-t pt-8">
-        <BtnLink variant="default" href={href(`/task/${m.task}${m.mode ? `?mode=${m.mode}` : ""}`)}>
+        <BtnLink
+          variant="default"
+          href={href(
+            `/task/${m.task}?${m.mode ? `mode=${m.mode}&` : ""}${view.options.test_set ? `test=${view.options.test_set}` : ""}`,
+          )}
+        >
           <Plus aria-hidden />
           Evaluate another CSV
         </BtnLink>

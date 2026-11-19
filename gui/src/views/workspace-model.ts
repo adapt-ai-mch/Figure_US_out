@@ -22,8 +22,8 @@ export type Setup = {
   exclude_invalid: boolean
 }
 
-export const emptySetup = (mode: Setup["mode"]): Setup => ({
-  test_set: null,
+export const emptySetup = (mode: Setup["mode"], testSet: Setup["test_set"] = null): Setup => ({
+  test_set: testSet,
   title: "",
   mode,
   positive_label: "",

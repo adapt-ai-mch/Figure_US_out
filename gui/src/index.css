@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 /* Fonts are bundled from npm, so the app needs no network at run time */
 @import "@fontsource-variable/source-serif-4";
+@import "@fontsource-variable/source-serif-4/wght-italic.css";
 @import "@fontsource/ibm-plex-sans/400.css";
 @import "@fontsource/ibm-plex-sans/500.css";
 @import "@fontsource/ibm-plex-sans/600.css";
@@ -143,4 +144,14 @@
   html {
     @apply font-sans;
     }
+}
+
+/* The FigureUS(out) name: navy (Internal Test) running into ochre (External Test).
+   The bottom padding keeps the descender of the "g" inside the painted area. */
+@utility text-brand {
+    background-image: linear-gradient(100deg, var(--internal) 0%, #2B5C8A 42%, #7A6A2E 72%, var(--external) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    padding-bottom: 0.12em;
 }
