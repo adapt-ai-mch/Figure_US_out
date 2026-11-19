@@ -380,7 +380,7 @@ function StepSection({
           className={cn(
             "flex size-9 shrink-0 items-center justify-center rounded-full border-2 font-heading text-lg font-bold sm:size-11 sm:text-xl",
             state === "done" && "border-primary bg-primary text-primary-foreground",
-            state === "current" && "border-primary bg-card text-primary",
+            state === "current" && "border-primary-ink bg-card text-primary-ink",
             state === "upcoming" && "border-border bg-card text-muted-foreground",
           )}
         >

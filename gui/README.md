@@ -59,14 +59,14 @@ Everything the page needs is bundled: fonts come from `@fontsource` packages and
 
 ## Notes
 
-- **Palette:** navy `#1E3A5F` = Internal Test, ochre `#A16207` = External Test (`--internal`, `--external` in `index.css`). Headings use Source Serif 4, everything else IBM Plex Sans.
+- **Palette:** primary soft pink `#E8B4B8`, secondary sage green `#A8D5BA`, call to action gold `#D4AF37`, background warm white `#FFF5F5`, text charcoal `#2D3436`. The three colours are fills with charcoal text on them (gold for every main action button, pink for selected and finished states, sage for tinted panels). On warm white they are too faint to read as text, so coloured text, thin outlines and progress bars use deeper shades of the same hues: `--primary-ink` `#9E4452`, Internal Test `#9E4452` (pink family), External Test `#2F6B4B` (sage family). Headings use Source Serif 4, everything else IBM Plex Sans.
 - **Reduced motion (hero):** with "Reduce motion" turned on, the corridor also freezes as a still picture.
 - **Task badges:** each opens its task's CSV page; there is no menu. They sit in fixed grid cells, so one fanning out on hover never pushes the others; the image corridor is placed in the gap between the title and the tasks, measured at every width.
 - **Intro:** plays when the app is opened (name, then the tagline a second later, then the tasks), not again when you come back to the start page from another screen.
 - **Screen changes:** forward means deeper (start → task or Recent runs → results); everything else is back. The screen being left is pinned where it was scrolled to (browser scroll restoration is off, since the app starts every screen at the top). Inner scroll areas carry `data-lenis-prevent`, and Lenis pauses while a plot is enlarged.
 - **Reduced motion:** with "Reduce motion" on, the intro, the screen changes and smooth scrolling are off; screens simply change.
 - **Two test sets:** each CSV is its own evaluate.py run (`--test-set internal` or `external`). Runs evaluated together share a group id, so Recent runs and the results page (`#/results/<internal run>,<external run>`) keep them together.
-- **Themes:** the `.dark` block in `index.css` redefines every colour token (Internal stays blue and External ochre, lightened). Plots stay on white, as evaluate.py draws them.
+- **Themes:** the `.dark` block in `index.css` redefines every colour token on a charcoal ground; there pink, sage and gold are used as they are (Internal Test pink, External Test sage). Plots stay on white, as evaluate.py draws them.
 - **Saving plots:** the TIFF, JPEG and SVG files are made by `evaluate.py --export-figures` when the run is evaluated; the app only fetches them. `showSaveFilePicker` (Chrome, Edge, Brave, Arc) gives a Save dialog with folder and name; other browsers get a normal download.
 - **Lint warnings:** the four warnings from `npm run lint` are in the copied component files (`button.tsx`, `liquid-glass-button.tsx`), which are kept exactly as supplied.
 - **Bundle size:** framer-motion and Lenis bring the script to about 510 kB (165 kB compressed); Vite's note about chunks over 500 kB is expected. Everything still loads from this computer.

@@ -73,7 +73,7 @@ export function DataStep(p: Props) {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3">
           <h3 className="flex items-center gap-2 text-[15px] font-semibold">
-            <Upload aria-hidden className="size-[18px] text-primary" />
+            <Upload aria-hidden className="size-[18px] text-primary-ink" />
             {p.task.usesFiles ? "Choose the folder with the CSV and its files" : "Choose the predictions CSV"}
           </h3>
           <p className="max-w-[66ch] text-sm text-muted-foreground">
@@ -98,7 +98,7 @@ export function DataStep(p: Props) {
             <div role="status" aria-live="polite" className="flex max-w-md flex-col gap-1.5 text-sm">
               <span>Copying the files… {Math.round(upload * 100)}%</span>
               <span className="h-1.5 overflow-hidden rounded-full bg-muted">
-                <span className="block h-full rounded-full bg-primary" style={{ width: `${upload * 100}%` }} />
+                <span className="block h-full rounded-full bg-primary-ink" style={{ width: `${upload * 100}%` }} />
               </span>
             </div>
           )}
@@ -121,7 +121,7 @@ export function DataStep(p: Props) {
             htmlFor={`${p.idPrefix}-csv-path`}
             label={
               <span className="flex items-center gap-2">
-                <Link2 aria-hidden className="size-[18px] text-primary" />
+                <Link2 aria-hidden className="size-[18px] text-primary-ink" />
                 Use the CSV where it is
               </span>
             }
@@ -153,9 +153,9 @@ export function DataStep(p: Props) {
       <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border bg-muted/50 px-4 py-3">
         <div className="flex min-w-0 items-start gap-3">
           {p.job.source === "path" ? (
-            <FolderOpen aria-hidden className="mt-0.5 size-5 shrink-0 text-primary" />
+            <FolderOpen aria-hidden className="mt-0.5 size-5 shrink-0 text-primary-ink" />
           ) : (
-            <FileSpreadsheet aria-hidden className="mt-0.5 size-5 shrink-0 text-primary" />
+            <FileSpreadsheet aria-hidden className="mt-0.5 size-5 shrink-0 text-primary-ink" />
           )}
           <div className="flex min-w-0 flex-col [overflow-wrap:anywhere]">
             <span className="font-semibold">{p.csv ?? "Choose the CSV below"}</span>
@@ -203,7 +203,7 @@ export function DataStep(p: Props) {
                 return (
                   <div key={c.name} className="grid grid-cols-1 items-center gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:gap-6">
                     <label htmlFor={id} className="flex flex-col">
-                      <span className="font-mono text-[14px] font-semibold text-primary">
+                      <span className="font-mono text-[14px] font-semibold text-primary-ink">
                         {c.name}
                         {c.optional && <span className="font-sans font-normal text-muted-foreground"> (optional)</span>}
                       </span>
@@ -286,7 +286,7 @@ function pickerClass(primary: boolean) {
     "inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg border px-5 text-[15px] font-semibold transition-colors",
     "peer-focus-visible:ring-3 peer-focus-visible:ring-ring/40 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
     primary
-      ? "border-transparent bg-primary text-primary-foreground hover:bg-primary/85"
+      ? "border-transparent bg-cta text-cta-foreground hover:bg-cta/85" // the step's main action: gold, like every call to action
       : "border-border bg-background text-foreground hover:bg-muted",
   ].join(" ")
 }

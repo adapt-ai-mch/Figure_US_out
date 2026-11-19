@@ -60,7 +60,7 @@ export function AppHeader({ accent }: { accent?: string }) {
       <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-4 px-4 sm:px-6">
         <a
           href={href("/")}
-          className="flex min-h-11 items-center gap-2.5 rounded-md text-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+          className="flex min-h-11 items-center gap-2.5 rounded-md text-primary-ink outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
         >
           <FanLogo className="size-8" />
           <span className="font-heading text-xl font-bold tracking-[-0.02em] text-brand">FigureUS(out)</span>
@@ -69,7 +69,7 @@ export function AppHeader({ accent }: { accent?: string }) {
         <div className="flex items-center gap-2 sm:gap-4">
           <a
             href={href("/runs")}
-            className="flex min-h-11 items-center gap-2 rounded-md px-2 text-[15px] font-medium text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/40"
+            className="flex min-h-11 items-center gap-2 rounded-md px-2 text-[15px] font-medium text-primary-ink outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/40"
           >
             <History aria-hidden className="size-[18px]" />
             <span className="sr-only sm:not-sr-only">Recent runs</span>

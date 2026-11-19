@@ -165,7 +165,7 @@ function ResultsBody({ runs }: { runs: Run[] }) {
                 {r.results.files.map((f) => (
                   <li key={f.file}>
                     <a
-                      className="text-primary underline-offset-2 hover:underline [overflow-wrap:anywhere]"
+                      className="text-primary-ink underline-offset-2 hover:underline [overflow-wrap:anywhere]"
                       href={api.fileUrl(r.view.run_id, f.file, true)}
                       download
                     >
@@ -425,7 +425,7 @@ function MetricsTable({ runs }: { runs: Run[] }) {
             <tbody key={g} className="divide-y">
               {groups.length > 1 && (
                 <tr className="bg-secondary/40">
-                  <th scope="rowgroup" colSpan={cols} className="px-4 py-2 text-sm font-semibold text-primary">
+                  <th scope="rowgroup" colSpan={cols} className="px-4 py-2 text-sm font-semibold text-primary-ink">
                     {g}
                   </th>
                 </tr>

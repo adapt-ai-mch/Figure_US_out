@@ -8,7 +8,10 @@ import { cn } from "@/lib/utils"
 
 type BtnProps = ComponentProps<"button"> & { variant?: "default" | "outline" | "secondary" | "ghost" | "link" }
 
-/** A shadcn button at a comfortable size. */
+// The main action on a screen is gold (call to action) with charcoal text.
+const CTA = "bg-cta text-cta-foreground hover:bg-cta/85"
+
+/** A shadcn button at a comfortable size; the default variant is the gold call to action. */
 export function Btn({ className, variant = "default", type = "button", ...props }: BtnProps) {
   return (
     <button
@@ -16,6 +19,7 @@ export function Btn({ className, variant = "default", type = "button", ...props 
       className={cn(
         buttonVariants({ variant }),
         "h-11 cursor-pointer gap-2 rounded-lg px-5 text-[15px] font-semibold disabled:cursor-not-allowed [&_svg:not([class*='size-'])]:size-[18px]",
+        variant === "default" && CTA,
         className,
       )}
       {...props}
@@ -34,6 +38,7 @@ export function BtnLink({
       className={cn(
         buttonVariants({ variant }),
         "h-11 gap-2 rounded-lg px-5 text-[15px] font-semibold [&_svg:not([class*='size-'])]:size-[18px]",
+        variant === "default" && CTA,
         className,
       )}
       {...props}
@@ -148,7 +153,7 @@ export function Segmented<T extends string>({
           className={cn(
             "flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border bg-card px-3.5 py-2.5 transition-colors",
             "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/40 hover:border-primary/50",
-            value === o.value ? "border-primary bg-secondary/60 ring-1 ring-primary" : "border-input",
+            value === o.value ? "border-primary-ink bg-secondary/60 ring-1 ring-primary-ink" : "border-input",
             invalid && value === null && "border-destructive",
           )}
         >
@@ -190,7 +195,7 @@ export function Checkbox({ label, hint, ...props }: ComponentProps<"input"> & { 
 }
 
 const NOTE_STYLE = {
-  info: { icon: Info, box: "border-primary/25 bg-secondary/50", text: "text-primary" },
+  info: { icon: Info, box: "border-primary/25 bg-secondary/50", text: "text-primary-ink" },
   warning: { icon: AlertTriangle, box: "border-warning-border bg-warning-bg", text: "text-warning-fg" },
   error: { icon: XCircle, box: "border-destructive/40 bg-destructive/5", text: "text-destructive" },
 }
@@ -233,7 +238,7 @@ export function Progress({ step, total, label }: { step: number; total: number; 
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out motion-reduce:transition-none"
+          className="h-full rounded-full bg-primary-ink transition-[width] duration-500 ease-out motion-reduce:transition-none"
           style={{ width: `${Math.max(6, (step / total) * 100)}%` }}
         />
       </div>

@@ -110,14 +110,14 @@ export function StartPage() {
         <div className="relative z-10 flex h-full flex-col items-center justify-between gap-44 px-6 py-11 text-center sm:gap-6">
           <div ref={topRef} className="flex flex-col items-center gap-3">
             <motion.div {...appear(play, AT.name)} className="flex flex-col items-center gap-3">
-              <FanLogo className="size-14 text-primary" />
+              <FanLogo className="size-14 text-primary-ink" />
               <h1 className="font-heading text-[clamp(2.6rem,7.5vw,6.5rem)] font-bold leading-[0.98] tracking-[-0.03em] text-brand">
                 FigureUS(out)
               </h1>
             </motion.div>
             <motion.p
               {...appear(play, AT.tagline)}
-              className="-mt-1 text-balance font-heading text-[clamp(1.15rem,2.2vw,1.6rem)] italic tracking-[-0.005em] text-primary"
+              className="-mt-1 text-balance font-heading text-[clamp(1.15rem,2.2vw,1.6rem)] italic tracking-[-0.005em] text-primary-ink"
             >
               because every model has a story to plot...
             </motion.p>
@@ -147,7 +147,7 @@ export function StartPage() {
             <motion.a
               {...appear(play, AT.tasks + 0.6)}
               href={href("/runs")}
-              className="flex min-h-11 items-center gap-2 rounded-md px-2 text-[15px] font-medium text-primary hover:underline"
+              className="flex min-h-11 items-center gap-2 rounded-md px-2 text-[15px] font-medium text-primary-ink hover:underline"
             >
               <History aria-hidden className="size-[18px]" />
               Recent runs
