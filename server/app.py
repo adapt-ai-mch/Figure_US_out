@@ -243,6 +243,7 @@ class RunBody(BaseModel):
     kind: Literal["check", "evaluate"]
     options: Options
     cohort_id: str | None = Field(default=None, pattern=r"^[0-9a-f]{16}$")
+    group: str | None = Field(default=None, pattern=r"^[0-9a-z-]{1,40}$")  # runs evaluated together (internal + external)
 
 
 def build_command(job: dict, o: Options, kind: str, cohort_id: str | None, out: Path) -> list[str]:
@@ -305,7 +306,8 @@ def start_run(job_id: str, body: RunBody):
     cmd = build_command(job, body.options, body.kind, body.cohort_id, out)
     (run_dir / "request.json").write_text(json.dumps(
         {"run_id": run_id, "job_id": job_id, "kind": body.kind, "options": body.options.model_dump(),
-         "cohort_id": body.cohort_id, "started": datetime.now().isoformat(timespec="seconds")}, indent=2),
+         "cohort_id": body.cohort_id, "group": body.group, "started": datetime.now().isoformat(timespec="seconds")},
+        indent=2),
         encoding="utf-8")
     proc = subprocess.Popen(cmd, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", bufsize=1)
@@ -354,7 +356,7 @@ def run_view(run_dir: Path) -> dict:
     req = read_json(run_dir / "request.json")
     run_id, out = run_dir.name, run_dir / "out"
     view = {"run_id": run_id, "job_id": req["job_id"], "kind": req["kind"], "options": req["options"],
-            "started": req["started"]}
+            "started": req["started"], "group": req.get("group")}
     live = RUNNING.get(run_id)
     if live is not None:
         return view | {"state": "running", "progress": progress(live["lines"])}
@@ -450,7 +452,7 @@ def recent_runs(limit: int = 50):
         o = req["options"]
         rows.append({"run_id": run_dir.name, "task": o["task"], "mode": o.get("mode"), "test_set": o.get("test_set"),
                      "title": meta.get("title"), "csv": Path(o["csv"]).name, "started": req["started"],
-                     "n_participants": meta.get("n_participants")})
+                     "n_participants": meta.get("n_participants"), "group": req.get("group")})
     rows.sort(key=lambda r: r["run_id"], reverse=True)
     return rows[:limit]
 

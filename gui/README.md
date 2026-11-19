@@ -2,7 +2,7 @@
 
 The desktop front end for the model-eval skill. It shows what `../scripts/evaluate.py` produces; it never calculates a metric itself.
 
-**What it does:** the start page (image-stream hero, "FigureUS(out)", one liquid-glass button per task) opens each task's menu. From there: choose the predictions CSV (upload a file or a folder, or use a CSV in place by its path), match its columns, answer the set-up questions, check the CSV, confirm the cohort with Proceed / Retry, and read the results (metrics as evaluate.py reported them, a plot menu, notices, downloads, an editable title). Recent runs reopens earlier results.
+**What it does:** the start page (image-stream hero, "FigureUS(out)", one liquid-glass button per task) opens each task's CSV page directly. There: add the internal test set CSV, the external test set CSV, or both (upload a file or a folder, or use a CSV in place by its path), match the columns, answer the set-up questions once for both, check the CSVs, confirm the cohorts with Proceed / Retry, and read the results with the two test sets side by side (metrics as evaluate.py reported them, a plot menu, notices, downloads, an editable title). Recent runs reopens earlier results.
 
 It runs on the user's own computer only: `../server/app.py` serves this app and runs `evaluate.py` at http://127.0.0.1:8765.
 
@@ -14,12 +14,12 @@ Vite + React 19 + TypeScript, Tailwind CSS v4, shadcn (components in `src/compon
 |---|---|
 | `src/components/ui/image-stream-hero.tsx` | Image-stream hero, copied as supplied |
 | `src/components/ui/liquid-glass-button.tsx` | `LiquidButton` (used for the task buttons), plus `Button` and `MetalButton`, copied as supplied |
-| `src/components/ui/dorpdown-navigation.tsx` | `DropdownNavigation` (the task menus), adapted from the supplied file, name kept: fixed its props type so it compiles; a `<nav>` root instead of a full-screen `<main>`; click, keyboard, Escape and outside-click handling; optional `renderTrigger`, `onSelect`, `side`, `align`, `listClassName`; menus stay inside the hero and stack on phones. Its look and animations are unchanged; the header comment lists every change |
+| `src/components/ui/dorpdown-navigation.tsx` | `DropdownNavigation`, adapted from the supplied file (its header comment lists every change). Not used at the moment: the task buttons now open the CSV page directly |
 | `src/components/ui/button.tsx` | shadcn's own button (from `shadcn init`; its `cn` import was corrected to `@/lib/utils`) |
 | `src/App.tsx` | Picks the screen from the address: `#/`, `#/task/<task>`, `#/results/<run>`, `#/runs` |
 | `src/views/StartPage.tsx` | The start page |
-| `src/views/Workspace.tsx` | One task's three steps; `DataStep`, `SetupStep`, `CheckStep` and `workspace-model.ts` hold each part |
-| `src/views/ResultsView.tsx` | Results of one run, and the title editor |
+| `src/views/Workspace.tsx` | One task's three steps for the internal and external CSV; `DataStep`, `SetupStep`, `CheckStep` and `workspace-model.ts` hold each part |
+| `src/views/ResultsView.tsx` | Results of one or two runs (internal and external side by side), and the title editor |
 | `src/views/RecentRuns.tsx` | Finished evaluations on this computer |
 | `src/components/form.tsx`, `app-chrome.tsx` | Form controls, notes, progress; the header and page frame |
 | `src/lib/api.ts` | Client for the local server (`/api/...`) |
@@ -55,7 +55,8 @@ Everything the page needs is bundled: fonts come from `@fontsource` packages and
 - **Palette:** navy `#1E3A5F` = Internal Test, ochre `#A16207` = External Test (`--internal`, `--external` in `index.css`). Headings use Source Serif 4, everything else IBM Plex Sans.
 - **Liquid glass:** the distortion uses an SVG filter inside `backdrop-filter`, which only Chromium browsers support. Safari (and a WebKit-based Mac app shell) shows the button without the distortion. The task buttons add a light tint so their text stays readable either way.
 - **Reduced motion:** with "Reduce motion" turned on, the corridor freezes as a still picture.
-- **Task menus:** they open upward, because the hero clips anything below its bottom edge. Hover previews a menu; a click keeps it open until a second click, Escape or a click elsewhere.
+- **Task buttons:** each opens its task's CSV page; there is no menu on hover or click.
+- **Two test sets:** each CSV is its own evaluate.py run (`--test-set internal` or `external`). Runs evaluated together share a group id, so Recent runs and the results page (`#/results/<internal run>,<external run>`) keep them together.
 - **Lint warnings:** the four warnings from `npm run lint` are in the copied component files (`button.tsx`, `liquid-glass-button.tsx`), which are kept exactly as supplied.
 
 ## How it talks to evaluate.py

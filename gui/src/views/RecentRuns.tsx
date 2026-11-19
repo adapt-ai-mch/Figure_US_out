@@ -21,6 +21,19 @@ export function RecentRuns({ task }: { task: TaskKey | null }) {
   }, [])
 
   const shown = runs?.filter((r) => !task || r.task === task) ?? []
+  // Runs evaluated together (internal and external test set) open together.
+  const entries: RecentRun[][] = []
+  const byGroup = new Map<string, RecentRun[]>()
+  for (const r of shown) {
+    const together = r.group ? byGroup.get(r.group) : undefined
+    if (together) together.push(r)
+    else {
+      const e = [r]
+      entries.push(e)
+      if (r.group) byGroup.set(r.group, e)
+    }
+  }
+  for (const e of entries) e.sort((a, b) => (a.test_set === b.test_set ? 0 : a.test_set === "internal" ? -1 : 1))
   return (
     <Page>
       <div className="mb-8 flex flex-col gap-2">
@@ -58,29 +71,39 @@ export function RecentRuns({ task }: { task: TaskKey | null }) {
           </BtnLink>
         </div>
       )}
-      {shown.length > 0 && (
+      {entries.length > 0 && (
         <ul className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">
-          {shown.map((r) => {
-            const ts = TEST_SET[r.test_set]
+          {entries.map((e) => {
+            const first = e[0]
             return (
-              <li key={r.run_id}>
+              <li key={first.run_id}>
                 <a
-                  href={href(`/results/${r.run_id}`)}
+                  href={href(`/results/${e.map((r) => r.run_id).join(",")}`)}
                   className="group flex items-center gap-4 px-5 py-4 outline-none hover:bg-muted/60 focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:ring-inset"
                 >
-                  <span aria-hidden className="h-10 w-1 shrink-0 rounded-full" style={{ background: ts.color }} />
+                  <span aria-hidden className="flex h-10 shrink-0 gap-1">
+                    {e.map((r) => (
+                      <span key={r.run_id} className="h-full w-1 rounded-full" style={{ background: TEST_SET[r.test_set].color }} />
+                    ))}
+                  </span>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="font-semibold [overflow-wrap:anywhere]">
-                      {r.title || `${TASK_BY_KEY[r.task].label} results`}
+                      {first.title || `${TASK_BY_KEY[first.task].label} results`}
                     </span>
                     <span className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
-                      {ts.label}, {TASK_BY_KEY[r.task].label}
-                      {r.mode ? ` (${r.mode === "fgr" ? "FGR" : "Standard"})` : ""}, {r.csv}
-                      {r.n_participants !== null ? `, ${r.n_participants} participants` : ""}
+                      {TASK_BY_KEY[first.task].label}
+                      {first.mode ? ` (${first.mode === "fgr" ? "FGR" : "Standard"})` : ""}.{" "}
+                      {e
+                        .map(
+                          (r) =>
+                            `${TEST_SET[r.test_set].label}: ${r.csv}` +
+                            (r.n_participants !== null ? `, ${r.n_participants} participants` : ""),
+                        )
+                        .join("; ")}
                     </span>
                   </span>
                   <span className="hidden shrink-0 text-sm text-muted-foreground sm:block">
-                    {new Date(r.started).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                    {new Date(first.started).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
                   </span>
                   <ChevronRight aria-hidden className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </a>

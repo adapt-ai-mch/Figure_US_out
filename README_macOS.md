@@ -98,11 +98,11 @@ cd /path/to/model-eval
 
 The browser opens **http://127.0.0.1:8765**. Keep the Terminal window open while you work; press Control-C there to stop. The address works on this computer only: the server listens on 127.0.0.1, answers only requests addressed to this computer, and refuses changes that do not come from its own page.
 
-1. Choose a task, then the predictions CSV. For segmentation and detection, choose the **folder** that holds the CSV and its masks or XML files, so relative paths keep working. Or paste the CSV's full path (Finder: select it, Option-Command-C) to use it where it is, without a copy.
-2. Match the columns: if your CSV says `fpath`, `TRUE`, `PRED`, pick them for `record_id`, `true`, `pred`. The CSV is not changed.
-3. Answer the set-up questions (test set, unit, labels, threshold range…), then **Check the CSV**. Problems are listed by CSV line; questions evaluate.py asks appear next to their field.
-4. Confirm the cohort (**Total participants: N**) with **Proceed**, or **Retry**.
-5. Results: metrics with 95% CIs as reported by evaluate.py, a plot menu, notices, and downloads (zip, report, metrics). Edit the title on the results page; saving re-runs with the same seed, so the numbers do not change. **Recent runs** reopens earlier results.
+1. Click a task. Its CSV page opens with two places: **Internal test set** and **External test set**. Add one or both. For segmentation and detection, choose the **folder** that holds the CSV and its masks or XML files, so relative paths keep working. Or paste the CSV's full path (Finder: select it, Option-Command-C) to use it where it is, without a copy.
+2. Match the columns: if your CSV says `fpath`, `TRUE`, `PRED`, pick them for `record_id`, `true`, `pred`. The CSV is not changed. When the second CSV has the same column names, it is matched like the first; check it before going on.
+3. Answer the set-up questions (unit, labels, threshold range…); they apply to both test sets. Then **Check both CSVs** (or **Check the CSV**). Problems are listed by CSV line for each test set; questions evaluate.py asks appear next to their field.
+4. Confirm the cohorts (**Total participants: N** for each test set) with **Proceed**, or **Retry**. Proceed evaluates the internal test set, then the external.
+5. Results, internal and external side by side: metrics with 95% CIs as reported by evaluate.py (one column pair per test set), a plot menu that shows the chosen plot for each test set, notices, and downloads (zip, report, metrics) per test set. Edit the title on the results page; saving re-runs with the same seed, so the numbers do not change. **Recent runs** reopens earlier results; a pair evaluated together opens together.
 
 Uploaded copies and every result are kept in `eval_output/gui_jobs/` on this computer. That folder is never committed to git; delete it when the files are no longer needed.
 

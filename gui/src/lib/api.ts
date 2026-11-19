@@ -101,6 +101,7 @@ export type RunView = {
   kind: "check" | "evaluate"
   options: Options
   started: string
+  group?: string | null
   state: "running" | "finished"
   progress?: { step: number; total: number; label: string } | null
   exit_code?: number
@@ -123,6 +124,7 @@ export type RecentRun = {
   csv: string
   started: string
   n_participants: number | null
+  group: string | null
 }
 
 const SERVER_DOWN =
@@ -187,8 +189,11 @@ export const api = {
     call<{ values: string[] | null }>(
       `/api/jobs/${job}/labels?name=${encodeURIComponent(name)}&column=${encodeURIComponent(column)}`,
     ),
-  startRun: (job: string, kind: "check" | "evaluate", options: Options, cohortId?: string) =>
-    call<{ run_id: string }>(`/api/jobs/${job}/runs`, json({ kind, options, cohort_id: cohortId ?? null })),
+  startRun: (job: string, kind: "check" | "evaluate", options: Options, cohortId?: string, group?: string) =>
+    call<{ run_id: string }>(
+      `/api/jobs/${job}/runs`,
+      json({ kind, options, cohort_id: cohortId ?? null, group: group ?? null }),
+    ),
   getRun: (runId: string) => call<RunView>(`/api/runs/${runId}`),
   recentRuns: () => call<RecentRun[]>("/api/runs"),
   fileUrl: (runId: string, file: string, download = false) =>
@@ -203,8 +208,9 @@ export async function runAndWait(
   options: Options,
   onProgress: (p: RunView["progress"]) => void,
   cohortId?: string,
+  group?: string,
 ): Promise<RunView> {
-  const { run_id } = await api.startRun(job, kind, options, cohortId)
+  const { run_id } = await api.startRun(job, kind, options, cohortId, group)
   for (;;) {
     const v = await api.getRun(run_id)
     if (v.state === "finished") return v
@@ -212,3 +218,6 @@ export async function runAndWait(
     await new Promise((r) => setTimeout(r, 500))
   }
 }
+
+/** A short id shared by runs evaluated together (internal and external test set). */
+export const newGroup = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`

@@ -72,8 +72,9 @@ class Client:
                                  {**HEADER, "content-type": f"multipart/form-data; boundary={boundary}"})
         return code, json.loads(raw)
 
-    def run(self, job: str, kind: str, options: dict, cohort_id: str | None = None) -> dict:
-        _, started = self.json("POST", f"/api/jobs/{job}/runs", {"kind": kind, "options": options, "cohort_id": cohort_id})
+    def run(self, job: str, kind: str, options: dict, cohort_id: str | None = None, group: str | None = None) -> dict:
+        _, started = self.json("POST", f"/api/jobs/{job}/runs",
+                               {"kind": kind, "options": options, "cohort_id": cohort_id, "group": group})
         for _ in range(600):
             _, view = self.json("GET", f"/api/runs/{started['run_id']}")
             if view["state"] == "finished":
@@ -130,7 +131,7 @@ def main() -> None:
                   view["status"] == "ok" and cohort.get("total_participants") == 4 and "results" not in view, str(view)[:300])
             bad = c.run(job["job_id"], "evaluate", options, "0" * 16)
             check("a cohort id that does not match is sent back to Retry", bad["status"] == "retry")
-            view = c.run(job["job_id"], "evaluate", options, cohort.get("cohort_id"))
+            view = c.run(job["job_id"], "evaluate", options, cohort.get("cohort_id"), group="test-pair")
             res = view.get("results") or {}
             mae = next((m for m in res.get("metrics", []) if m["metric"] == "MAE"), {})
             check("the confirmed cohort runs the evaluation; values are evaluate.py's reported text",
@@ -148,7 +149,8 @@ def main() -> None:
             code, _ = c.request("GET", f"/api/runs/{rid}/files/..%2F..%2Fjob.json")
             check("paths outside the run are refused (404)", code == 404)
             code, runs = c.json("GET", "/api/runs")
-            check("recent runs list the finished evaluation", code == 200 and any(r["run_id"] == rid for r in runs))
+            check("recent runs list the finished evaluation with its group (internal + external together)",
+                  code == 200 and any(r["run_id"] == rid and r["group"] == "test-pair" for r in runs))
 
             code, pjob = c.json("POST", "/api/jobs/path", {"path": str(data / "regression" / "tiny_known.csv")})
             check("a CSV can be used in place by its path", code == 200 and pjob["source"] == "path")

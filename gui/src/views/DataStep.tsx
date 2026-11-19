@@ -9,6 +9,10 @@ import { RECORD, VISIT, type Problems } from "@/views/workspace-model"
 
 type Props = {
   task: Task
+  /** Prefix for element ids, so the internal and external panels can sit on one page. */
+  idPrefix: string
+  /** Shown under the column matching when choices were copied from the other test set. */
+  copiedFrom?: string | null
   job: Job | null
   csv: string | null
   summary: CsvSummary | null
@@ -114,7 +118,7 @@ export function DataStep(p: Props) {
           }}
         >
           <Field
-            htmlFor="csv-path"
+            htmlFor={`${p.idPrefix}-csv-path`}
             label={
               <span className="flex items-center gap-2">
                 <Link2 aria-hidden className="size-[18px] text-primary" />
@@ -125,7 +129,7 @@ export function DataStep(p: Props) {
           >
             <div className="flex flex-col gap-2 sm:flex-row">
               <TextInput
-                id="csv-path"
+                id={`${p.idPrefix}-csv-path`}
                 value={path}
                 onChange={(e) => setPath(e.target.value)}
                 placeholder="/Users/you/Documents/study/predictions.csv"
@@ -170,8 +174,8 @@ export function DataStep(p: Props) {
       </div>
 
       {p.job.csv_files.length > 1 && (
-        <Field htmlFor="csv-choice" label="Which CSV holds the predictions?" required>
-          <Select id="csv-choice" value={p.csv ?? ""} onChange={(e) => p.onCsv(e.target.value)}>
+        <Field htmlFor={`${p.idPrefix}-csv-choice`} label="Which CSV holds the predictions?" required>
+          <Select id={`${p.idPrefix}-csv-choice`} value={p.csv ?? ""} onChange={(e) => p.onCsv(e.target.value)}>
             <option value="" disabled>
               Choose a CSV
             </option>
@@ -192,9 +196,9 @@ export function DataStep(p: Props) {
             help="evaluate.py looks for these names. Pick the CSV column that holds each one; the CSV itself is not changed."
             error={p.problems.columns ?? p.columnMessage}
           >
-            <div className="flex flex-col divide-y rounded-lg border bg-card" id="field-columns">
+            <div className="flex flex-col divide-y rounded-lg border bg-card" id={`${p.idPrefix}-field-columns`}>
               {p.task.columns.map((c) => {
-                const id = `col-${c.name}`
+                const id = `${p.idPrefix}-col-${c.name}`
                 const err = p.problems[`col:${c.name}`]
                 return (
                   <div key={c.name} className="grid grid-cols-1 items-center gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:gap-6">
@@ -227,6 +231,12 @@ export function DataStep(p: Props) {
             </div>
           </Field>
 
+          {p.copiedFrom && (
+            <p className="-mt-3 text-sm text-muted-foreground">
+              Matched like the {p.copiedFrom}, where this CSV has the same columns. Check before going on.
+            </p>
+          )}
+
           {p.task.key === "classification" ? (
             <p className="text-sm text-muted-foreground">
               Participants: in Standard mode each record_id is one participant; in FGR mode the participant is read
@@ -234,15 +244,15 @@ export function DataStep(p: Props) {
             </p>
           ) : (
             <Field
-              htmlFor="participant"
+              htmlFor={`${p.idPrefix}-participant`}
               label="How do rows link to participants?"
               help="Confidence intervals resample participants, so rows from one person stay together."
               error={p.problems.participant}
               required
             >
-              <div id="field-participant_col">
+              <div id={`${p.idPrefix}-field-participant_col`}>
                 <Select
-                  id="participant"
+                  id={`${p.idPrefix}-participant`}
                   value={p.participant}
                   onChange={(e) => p.onParticipant(e.target.value)}
                   aria-invalid={!!p.problems.participant || undefined}

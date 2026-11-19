@@ -1,13 +1,39 @@
 // Workspace state helpers: what the user chose, turned into evaluate.py options.
-import type { CsvSummary, Options } from "@/lib/api"
+// One task page holds up to two CSVs, the internal and the external test set; each is checked and
+// evaluated on its own (evaluate.py takes one CSV per run), with one shared set-up.
+import type { CsvSummary, Job, Options } from "@/lib/api"
 import type { ColumnSpec, TaskKey } from "@/lib/tasks"
 
 export const RECORD = "__record__" // each record_id is one participant
 export const VISIT = "__visit__" // record_id holds visit ids like 001_32+5
 export const TITLE_MAX = 80 // same limit as evaluate.py --title
 
+export type TestSetKey = "internal" | "external"
+export const TEST_SET_KEYS: TestSetKey[] = ["internal", "external"]
+
+/** One test set's CSV and how its columns are read. */
+export type Slot = {
+  job: Job | null
+  csv: string | null
+  summary: CsvSummary | null
+  mapping: Record<string, string>
+  participant: string
+  exclude_invalid: boolean
+  error: string | null
+}
+
+export const emptySlot = (): Slot => ({
+  job: null,
+  csv: null,
+  summary: null,
+  mapping: {},
+  participant: "",
+  exclude_invalid: false,
+  error: null,
+})
+
+/** Choices shared by both test sets. */
 export type Setup = {
-  test_set: "internal" | "external" | null
   title: string
   mode: "standard" | "fgr" | null
   positive_label: string
@@ -19,11 +45,9 @@ export type Setup = {
   repeated_measures: Options["repeated_measures"]
   empty_both: Options["empty_both"]
   frame_offset: string
-  exclude_invalid: boolean
 }
 
-export const emptySetup = (mode: Setup["mode"], testSet: Setup["test_set"] = null): Setup => ({
-  test_set: testSet,
+export const emptySetup = (mode: Setup["mode"]): Setup => ({
   title: "",
   mode,
   positive_label: "",
@@ -35,14 +59,18 @@ export const emptySetup = (mode: Setup["mode"], testSet: Setup["test_set"] = nul
   repeated_measures: null,
   empty_both: null,
   frame_offset: "0",
-  exclude_invalid: false,
 })
 
-/** Pick the CSV column with the expected name (exact, then ignoring case); otherwise leave it for the user. */
-export function autoMap(specs: ColumnSpec[], summary: CsvSummary): Record<string, string> {
+/**
+ * Pick the CSV column for each expected name: the column the other test set uses, when this CSV has one
+ * of that name; otherwise the expected name itself (exact, then ignoring case); otherwise leave it for the user.
+ */
+export function autoMap(specs: ColumnSpec[], summary: CsvSummary, other?: Record<string, string>): Record<string, string> {
   const out: Record<string, string> = {}
   for (const s of specs) {
+    const fromOther = other?.[s.name]
     out[s.name] =
+      (fromOther && summary.columns.includes(fromOther) ? fromOther : undefined) ??
       summary.columns.find((c) => c === s.name) ??
       summary.columns.find((c) => c.toLowerCase() === s.name.toLowerCase()) ??
       ""
@@ -50,25 +78,27 @@ export function autoMap(specs: ColumnSpec[], summary: CsvSummary): Record<string
   return out
 }
 
+/** The other test set's participant link, when it also makes sense for this CSV. */
+export function participantFrom(other: Slot, summary: CsvSummary): string {
+  const p = other.participant
+  if (p === RECORD || p === VISIT) return p
+  return p && summary.columns.includes(p) ? p : ""
+}
+
 const num = (v: string) => (v.trim() === "" ? null : Number(v))
 
-export function toOptions(
-  task: TaskKey,
-  csv: string,
-  mapping: Record<string, string>,
-  participant: string,
-  s: Setup,
-): Options {
+export function toOptions(task: TaskKey, testSet: TestSetKey, slot: Slot, s: Setup): Options | null {
+  if (!slot.csv) return null
   const classification = task === "classification"
-  const participantCol = !classification && participant && participant !== RECORD && participant !== VISIT ? participant : null
+  const p = slot.participant
   return {
     task,
-    csv,
-    test_set: s.test_set,
+    csv: slot.csv,
+    test_set: testSet,
     title: s.title.trim() || null,
-    columns: Object.fromEntries(Object.entries(mapping).filter(([, col]) => col)),
-    participant_col: participantCol,
-    id_format: !classification && participant === VISIT ? "visit" : "plain",
+    columns: Object.fromEntries(Object.entries(slot.mapping).filter(([, col]) => col)),
+    participant_col: !classification && p && p !== RECORD && p !== VISIT ? p : null,
+    id_format: !classification && p === VISIT ? "visit" : "plain",
     mode: classification ? s.mode : null,
     positive_label: classification ? s.positive_label || null : null,
     negative_label: classification ? s.negative_label || null : null,
@@ -79,29 +109,29 @@ export function toOptions(
     repeated_measures: task === "regression" ? s.repeated_measures : null,
     empty_both: task === "segmentation" ? s.empty_both : null,
     frame_offset: task === "detection" ? Number(s.frame_offset) || 0 : 0,
-    exclude_invalid: s.exclude_invalid,
+    exclude_invalid: slot.exclude_invalid,
   }
 }
 
 export type Problems = Partial<Record<string, string>>
 
-/** Choices still missing before evaluate.py can check the CSV. evaluate.py checks everything again. */
-export function missingChoices(
-  task: TaskKey,
-  specs: ColumnSpec[],
-  mapping: Record<string, string>,
-  participant: string,
-  s: Setup,
-): Problems {
+/** Column and participant choices still missing for one CSV. */
+export function slotProblems(task: TaskKey, specs: ColumnSpec[], slot: Slot): Problems {
   const p: Problems = {}
+  if (!slot.summary) return p
   for (const c of specs) {
-    if (!c.optional && !mapping[c.name]) p[`col:${c.name}`] = `Choose the column that holds ${c.name}.`
+    if (!c.optional && !slot.mapping[c.name]) p[`col:${c.name}`] = `Choose the column that holds ${c.name}.`
   }
-  const used = Object.values(mapping).filter(Boolean)
+  const used = Object.values(slot.mapping).filter(Boolean)
   const twice = used.find((c, i) => used.indexOf(c) !== i)
   if (twice) p.columns = `The column "${twice}" is chosen for two names. Each name needs its own column.`
-  if (task !== "classification" && !participant) p.participant = "Choose how rows link to participants."
-  if (!s.test_set) p.test_set = "Choose the test set. It goes into every file name and plot title."
+  if (task !== "classification" && !slot.participant) p.participant = "Choose how rows link to participants."
+  return p
+}
+
+/** Shared set-up choices still missing. evaluate.py checks everything again. */
+export function setupProblems(task: TaskKey, s: Setup): Problems {
+  const p: Problems = {}
   if (s.title.trim().length > TITLE_MAX) p.title = `Shorten the title to ${TITLE_MAX} characters or fewer.`
   if (task === "classification") {
     if (!s.mode) p.mode = "Choose Standard or FGR."

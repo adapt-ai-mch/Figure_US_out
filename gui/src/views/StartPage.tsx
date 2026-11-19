@@ -1,44 +1,13 @@
-// The start page: the image-stream hero, FigureUS(out), and one liquid-glass button per task.
-import { useSyncExternalStore, type SVGProps } from "react"
-import { Building2, ChevronDown, Globe, History } from "lucide-react"
+// The start page: the image-stream hero, FigureUS(out), and one liquid-glass button per task;
+// each button opens that task's CSV page.
+import { useSyncExternalStore } from "react"
+import { ArrowRight, History } from "lucide-react"
 
 import { FanLogo } from "@/components/app-chrome"
-import { DropdownNavigation, type NavItem } from "@/components/ui/dorpdown-navigation"
 import { ImageStreamHero, type StreamImage } from "@/components/ui/image-stream-hero"
 import { LiquidButton } from "@/components/ui/liquid-glass-button"
-import { href } from "@/lib/router"
-import { TASKS, type TaskKey } from "@/lib/tasks"
-import { cn } from "@/lib/utils"
-
-// Test-set icons in the test-set colours: navy = Internal Test, ochre = External Test.
-const InternalIcon = (props: SVGProps<SVGSVGElement>) => <Building2 {...props} style={{ color: "var(--internal)" }} />
-const ExternalIcon = (props: SVGProps<SVGSVGElement>) => <Globe {...props} style={{ color: "var(--external)" }} />
-
-type Mode = "standard" | "fgr"
-
-/** Internal and External test set, each opening the task with that test set already chosen. */
-function testSets(task: TaskKey, mode?: Mode) {
-  const link = (test: "internal" | "external") =>
-    href(`/task/${task}?${mode ? `mode=${mode}&` : ""}test=${test}`)
-  return [
-    { label: "Internal test set", description: "Titled Internal Test", icon: InternalIcon, href: link("internal") },
-    { label: "External test set", description: "Titled External Test", icon: ExternalIcon, href: link("external") },
-  ]
-}
-
-// What each task's dropdown offers once its liquid-glass button is clicked.
-const TASK_MENUS: Record<TaskKey, NavItem["subMenus"]> = {
-  classification: [
-    { title: "Standard", items: testSets("classification", "standard") },
-    { title: "FGR", items: testSets("classification", "fgr") },
-  ],
-  regression: [{ title: "Evaluate", items: testSets("regression") }],
-  detection: [{ title: "Evaluate", items: testSets("detection") }],
-  segmentation: [{ title: "Evaluate", items: testSets("segmentation") }],
-}
-
-// One dropdown per task; the id maps back to TASKS (id - 1).
-const NAV_ITEMS: NavItem[] = TASKS.map((t, i) => ({ id: i + 1, label: t.label, subMenus: TASK_MENUS[t.key] }))
+import { go, href } from "@/lib/router"
+import { TASKS } from "@/lib/tasks"
 
 // Plots FigureUS(out) made from synthetic data, and three example ultrasound frames
 // (segmentation overlay, detection boxes, fetal head) with no identifying text or file metadata.
@@ -95,36 +64,28 @@ export function StartPage() {
             <h2 id="task-question" className="text-xl font-semibold">
               Which task do you want to evaluate?
             </h2>
-            {/* The menus open upward: the hero clips anything below its bottom edge. */}
-            <DropdownNavigation
-              aria-label="Choose a task"
-              navItems={NAV_ITEMS}
-              side="top"
-              align="center"
-              listClassName="flex-wrap justify-center gap-x-[18px] gap-y-3.5"
-              renderTrigger={(item, { open, toggle, menuId }) => {
-                const t = TASKS[item.id - 1]
-                return (
-                  <LiquidButton
-                    aria-label={t.label}
-                    aria-expanded={open}
-                    aria-haspopup="true"
-                    aria-controls={open ? menuId : undefined}
-                    onClick={toggle}
-                    className="overflow-hidden rounded-full bg-white/70 text-base font-semibold text-primary aria-expanded:bg-secondary aria-expanded:ring-2 aria-expanded:ring-primary"
-                  >
-                    <span className="inline-flex items-center gap-2.5">
-                      <t.icon aria-hidden className="size-5" />
-                      {t.label}
-                      <ChevronDown
-                        aria-hidden
-                        className={cn("size-4 transition-transform duration-300", open && "rotate-180")}
-                      />
-                    </span>
-                  </LiquidButton>
-                )
-              }}
-            />
+            {/* Each task opens its CSV page directly. */}
+            <nav aria-label="Choose a task">
+              <ul className="flex flex-wrap justify-center gap-x-[18px] gap-y-3.5">
+                {TASKS.map((t) => (
+                  <li key={t.key}>
+                    <LiquidButton
+                      onClick={() => go(`/task/${t.key}`)}
+                      className="group overflow-hidden rounded-full bg-white/70 text-base font-semibold text-primary"
+                    >
+                      <span className="inline-flex items-center gap-2.5">
+                        <t.icon aria-hidden className="size-5" />
+                        {t.label}
+                        <ArrowRight
+                          aria-hidden
+                          className="size-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+                        />
+                      </span>
+                    </LiquidButton>
+                  </li>
+                ))}
+              </ul>
+            </nav>
             <a href={href("/runs")} className="flex min-h-11 items-center gap-2 rounded-md px-2 text-[15px] font-medium text-primary hover:underline">
               <History aria-hidden className="size-[18px]" />
               Recent runs

@@ -1,6 +1,6 @@
 // Shared chrome for the inner screens: the FigureUS(out) mark, a way back to the tasks, recent runs.
 import type { ReactNode, SVGProps } from "react"
-import { History } from "lucide-react"
+import { Building2, Globe, History } from "lucide-react"
 
 import { href } from "@/lib/router"
 import { cn } from "@/lib/utils"
@@ -16,6 +16,12 @@ export function FanLogo(props: SVGProps<SVGSVGElement>) {
       <path d="M14 15 h8 M18 11 v8" strokeWidth={1.4} />
     </svg>
   )
+}
+
+/** Internal test set: navy building; external test set: ochre globe. */
+export function TestSetIcon({ testSet, className }: { testSet: "internal" | "external"; className?: string }) {
+  const Icon = testSet === "internal" ? Building2 : Globe
+  return <Icon aria-hidden className={cn("size-5 shrink-0", className)} style={{ color: `var(--${testSet})` }} />
 }
 
 /** Top bar; its bottom edge takes the test-set colour once the test set is known. */

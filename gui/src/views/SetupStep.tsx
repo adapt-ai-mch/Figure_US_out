@@ -1,6 +1,6 @@
-// Step 2: the choices evaluate.py needs before it can check the CSV.
+// Step 2: the choices evaluate.py needs before it can check the CSVs; one set-up serves both test sets.
 import { Checkbox, Field, Segmented, Select, TextInput } from "@/components/form"
-import { TEST_SET, type Task } from "@/lib/tasks"
+import type { Task } from "@/lib/tasks"
 import { TITLE_MAX, type Problems, type Setup } from "@/views/workspace-model"
 
 type Props = {
@@ -27,26 +27,11 @@ export function SetupStep({ task, setup: s, onChange, problems, labels, needs, r
 
   return (
     <div className="flex flex-col gap-7">
-      <div id="field-test_set">
-        <Field group label="Which test set is this?" required error={err("test_set")}>
-          <Segmented
-            name="test_set"
-            value={s.test_set}
-            invalid={!!err("test_set")}
-            onChange={(v) => onChange({ test_set: v })}
-            options={[
-              { value: "internal", label: "Internal test set", swatch: TEST_SET.internal.color, hint: "Files and plot titles say Internal Test" },
-              { value: "external", label: "External test set", swatch: TEST_SET.external.color, hint: "Files and plot titles say External Test" },
-            ]}
-          />
-        </Field>
-      </div>
-
       <div id="field-title">
         <Field
           htmlFor="title"
           label="Title for these results (optional)"
-          help={`Heads the report, for example "GAUGE: After Pooling". You can change it later on the results page.`}
+          help={`Heads the report of each test set, for example "GAUGE: After Pooling". You can change it later on the results page.`}
           error={err("title")}
         >
           <TextInput

@@ -1,38 +1,54 @@
-// Step 3: what evaluate.py found when it checked the CSV, and the cohort confirmation (Proceed / Retry).
+// Step 3: what evaluate.py found when it checked each CSV, and the cohort confirmation (Proceed / Retry).
 import { ArrowRight, Download, RotateCcw, Users } from "lucide-react"
 
+import { TestSetIcon } from "@/components/app-chrome"
 import { Btn, BtnLink, Note, Progress } from "@/components/form"
 import { api, type RunView } from "@/lib/api"
+import { TEST_SET } from "@/lib/tasks"
+import type { TestSetKey } from "@/views/workspace-model"
+
+export type Busy = { kind: "check" | "evaluate"; testSet: TestSetKey; progress: RunView["progress"] }
 
 type Props = {
-  check: RunView | null
+  /** The test sets with a CSV, in order. */
+  loaded: TestSetKey[]
+  /** The latest check of each test set, when it still matches the current choices. */
+  checks: Partial<Record<TestSetKey, RunView>>
   stale: boolean
-  busy: { kind: "check" | "evaluate"; progress: RunView["progress"] } | null
-  evalFailure: RunView | null
+  busy: Busy | null
+  evalFailures: Partial<Record<TestSetKey, RunView>>
+  /** Evaluations that finished while another one failed. */
+  finished: Partial<Record<TestSetKey, string>>
   error: string | null
   canCheck: boolean
   onCheck: () => void
   onProceed: () => void
   onRetry: () => void
-  onExclude: () => void
+  onExclude: (testSet: TestSetKey) => void
 }
 
+const SET_NAME: Record<TestSetKey, string> = { internal: "Internal test set", external: "External test set" }
+
 export function CheckStep(p: Props) {
-  const c = p.check
+  const both = p.loaded.length > 1
+  const checked = p.loaded.filter((k) => p.checks[k])
+  const allOk = p.loaded.length > 0 && p.loaded.every((k) => p.checks[k]?.status === "ok")
+  const showButton = !p.busy && (p.stale || checked.length < p.loaded.length)
+
   return (
     <div className="flex flex-col gap-5">
-      {!c && !p.busy && (
+      {checked.length === 0 && !p.busy && (
         <p className="max-w-[66ch] text-[15px] text-muted-foreground">
-          evaluate.py reads every row and file, reports any problem by CSV line, and counts the cohort. Nothing is
-          calculated until you confirm the counts.
+          evaluate.py reads every row and file of {both ? "each CSV" : "the CSV"}, reports any problem by CSV line,
+          and counts the cohort. Nothing is calculated until you confirm the counts.
         </p>
       )}
-      {p.stale && !p.busy && <Note>Your choices changed after the last check. Check the CSV again.</Note>}
+      {p.stale && !p.busy && <Note>Your choices changed after the last check. Check again.</Note>}
 
-      {(!c || p.stale) && !p.busy && (
+      {showButton && (
         <div>
           <Btn onClick={p.onCheck} disabled={!p.canCheck}>
-            Check the CSV
+            {both ? "Check both CSVs" : "Check the CSV"}
             <ArrowRight aria-hidden />
           </Btn>
         </div>
@@ -40,6 +56,10 @@ export function CheckStep(p: Props) {
 
       {p.busy && (
         <div className="max-w-xl rounded-lg border bg-card px-5 py-4">
+          <p className="mb-3 flex items-center gap-2 text-[15px] font-semibold" style={{ color: TEST_SET[p.busy.testSet].color }}>
+            <TestSetIcon testSet={p.busy.testSet} className="size-[18px]" />
+            {SET_NAME[p.busy.testSet]}
+          </p>
           <Progress
             step={p.busy.progress?.step ?? 1}
             total={p.busy.progress?.total ?? 6}
@@ -48,6 +68,7 @@ export function CheckStep(p: Props) {
           {p.busy.kind === "evaluate" && (
             <p className="mt-3 text-sm text-muted-foreground">
               The bootstrap (1000 replicates) can take a minute for large files.
+              {both && " The internal test set runs first, then the external."}
             </p>
           )}
         </div>
@@ -55,12 +76,68 @@ export function CheckStep(p: Props) {
 
       {p.error && <Note tone="error">{p.error}</Note>}
 
-      {c && !p.stale && !p.busy && <CheckResult {...p} check={c} />}
+      {!p.stale && checked.length > 0 && (
+        <div className={both ? "grid grid-cols-1 gap-5 lg:grid-cols-2" : "flex flex-col gap-5"}>
+          {checked.map((k) => (
+            <CheckResult key={k} testSet={k} view={p.checks[k]!} onExclude={() => p.onExclude(k)} onRetry={p.onRetry} />
+          ))}
+        </div>
+      )}
+
+      {!p.stale && allOk && !p.busy && (
+        <div className="flex flex-col gap-3 border-t pt-5">
+          <p className="text-[15px]">
+            Proceed if {both ? "these counts match" : "this count matches"} your study. Retry returns to choosing the
+            CSV{both ? "s" : ""}.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Btn onClick={p.onProceed}>
+              Proceed
+              <ArrowRight aria-hidden />
+            </Btn>
+            <Btn variant="outline" onClick={p.onRetry}>
+              <RotateCcw aria-hidden />
+              Retry
+            </Btn>
+          </div>
+        </div>
+      )}
+
+      {p.loaded
+        .filter((k) => p.evalFailures[k])
+        .map((k) => (
+          <Failure key={k} view={p.evalFailures[k]!} testSet={k} />
+        ))}
+      {Object.entries(p.finished).map(([k, runId]) => (
+        <Note key={k} title={`${SET_NAME[k as TestSetKey]}: evaluated`}>
+          <a className="font-medium underline" href={`#/results/${runId}`}>
+            Open its results
+          </a>
+        </Note>
+      ))}
     </div>
   )
 }
 
-function CheckResult({ check: c, evalFailure, onProceed, onRetry, onExclude }: Props & { check: RunView }) {
+function CheckResult({
+  testSet,
+  view: c,
+  onExclude,
+  onRetry,
+}: {
+  testSet: TestSetKey
+  view: RunView
+  onExclude: () => void
+  onRetry: () => void
+}) {
+  const color = TEST_SET[testSet].color
+  const heading = (
+    <p className="flex items-center gap-2 text-[15px] font-semibold" style={{ color }}>
+      <TestSetIcon testSet={testSet} className="size-[18px]" />
+      {SET_NAME[testSet]}
+    </p>
+  )
+
   if (c.status === "ok" && c.cohort) {
     const k = c.cohort
     const rows = [
@@ -69,68 +146,58 @@ function CheckResult({ check: c, evalFailure, onProceed, onRetry, onExclude }: P
       ...(k.rows_excluded ? [["Rows excluded after validation", k.rows_excluded] as const] : []),
     ]
     return (
-      <div className="flex flex-col gap-4">
-        <section
-          aria-labelledby="cohort-heading"
-          className="max-w-xl overflow-hidden rounded-xl border-2 border-primary/80 bg-card shadow-[0_1px_0_rgb(15_23_42/0.04)]"
-        >
-          <div className="flex items-center gap-3 border-b bg-secondary/60 px-5 py-3">
-            <Users aria-hidden className="size-5 text-primary" />
-            <h3 id="cohort-heading" className="font-semibold text-primary">
-              Confirm the cohort
-            </h3>
-          </div>
-          <div className="flex flex-col gap-4 px-5 py-5">
-            <p className="font-heading text-3xl font-bold tracking-[-0.01em]">
-              Total participants: {k.total_participants}
-            </p>
-            <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1.5 text-[15px]">
-              {rows.map(([label, value]) => (
-                <div key={label} className="contents">
-                  <dt className="text-muted-foreground">{label}</dt>
-                  <dd className="text-right font-semibold">{value}</dd>
-                </div>
-              ))}
-            </dl>
-            {Object.keys(k.column_mapping).length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                Columns used:{" "}
-                {Object.entries(k.column_mapping)
-                  .map(([name, col]) => `${name} = ${col}`)
-                  .join(", ")}
-              </p>
-            )}
-            {k.notices.map((n) => (
-              <Note key={n} tone="warning">
-                {n}
-              </Note>
+      <section
+        aria-label={`${SET_NAME[testSet]}: cohort`}
+        className="overflow-hidden rounded-xl border-2 bg-card"
+        style={{ borderColor: color }}
+      >
+        <div className="flex items-center justify-between gap-3 border-b bg-muted/60 px-5 py-3">
+          {heading}
+          <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Users aria-hidden className="size-4" />
+            Confirm the cohort
+          </span>
+        </div>
+        <div className="flex flex-col gap-4 px-5 py-5">
+          <p className="font-heading text-3xl font-bold tracking-[-0.01em]">Total participants: {k.total_participants}</p>
+          <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1.5 text-[15px]">
+            {rows.map(([label, value]) => (
+              <div key={label} className="contents">
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="text-right font-semibold">{value}</dd>
+              </div>
             ))}
-            <p className="text-sm text-muted-foreground">Proceed if these counts match your study. Retry returns to choosing the CSV.</p>
-            <div className="flex flex-wrap gap-3">
-              <Btn onClick={onProceed}>
-                Proceed
-                <ArrowRight aria-hidden />
-              </Btn>
-              <Btn variant="outline" onClick={onRetry}>
-                <RotateCcw aria-hidden />
-                Retry
-              </Btn>
-            </div>
-          </div>
-        </section>
-        {evalFailure && <Failure view={evalFailure} />}
-      </div>
+          </dl>
+          {Object.keys(k.column_mapping).length > 0 && (
+            <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
+              Columns used:{" "}
+              {Object.entries(k.column_mapping)
+                .map(([name, col]) => `${name} = ${col}`)
+                .join(", ")}
+            </p>
+          )}
+          {k.notices.map((n) => (
+            <Note key={n} tone="warning">
+              {n}
+            </Note>
+          ))}
+        </div>
+      </section>
     )
   }
 
   if (c.status === "invalid" && c.issues) {
     const i = c.issues
     return (
-      <div className="flex flex-col gap-4">
-        <Note tone="warning" title={`${i.total} ${i.total === 1 ? "problem" : "problems"} on ${i.rows_affected} ${i.rows_affected === 1 ? "row" : "rows"}`}>
+      <section aria-label={`${SET_NAME[testSet]}: problems`} className="flex min-w-0 flex-col gap-3">
+        {heading}
+        <Note
+          tone="warning"
+          title={`${i.total} ${i.total === 1 ? "problem" : "problems"} on ${i.rows_affected} ${i.rows_affected === 1 ? "row" : "rows"}`}
+        >
           <p>No row is dropped silently. Fix the CSV and check it again, or exclude exactly these rows.</p>
         </Note>
-        <div className="max-h-[420px] overflow-auto rounded-lg border bg-card">
+        <div className="max-h-[360px] overflow-auto rounded-lg border bg-card">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Problems found, by CSV line</caption>
             <thead className="sticky top-0 bg-muted">
@@ -162,35 +229,42 @@ function CheckResult({ check: c, evalFailure, onProceed, onRetry, onExclude }: P
           <Btn onClick={onExclude}>Exclude these {i.rows_affected} rows and check again</Btn>
           <Btn variant="outline" onClick={onRetry}>
             <RotateCcw aria-hidden />
-            Choose another CSV
+            Choose other CSVs
           </Btn>
           <BtnLink variant="ghost" href={api.fileUrl(c.run_id, i.sheet, true)} download>
             <Download aria-hidden />
             Problems sheet (.csv)
           </BtnLink>
         </div>
-      </div>
+      </section>
     )
   }
 
   if (c.status === "needs_input") {
-    return <Note title="One more choice is needed">The highlighted question above says what evaluate.py needs. Answer it, then check again.</Note>
+    return (
+      <section aria-label={`${SET_NAME[testSet]}: question`} className="flex flex-col gap-3">
+        {heading}
+        <Note title="One more choice is needed">
+          The highlighted question above says what evaluate.py needs. Answer it, then check again.
+        </Note>
+      </section>
+    )
   }
 
-  return <Failure view={c} />
+  return <Failure view={c} testSet={testSet} />
 }
 
-function Failure({ view }: { view: RunView }) {
-  const title =
+function Failure({ view, testSet }: { view: RunView; testSet: TestSetKey }) {
+  const what =
     view.status === "missing_column"
-      ? "A column is missing"
+      ? "a column is missing"
       : view.status === "retry"
-        ? "The CSV changed"
+        ? "the CSV changed"
         : view.status === "needs_input"
-          ? "One more choice is needed"
+          ? "one more choice is needed"
           : "evaluate.py stopped"
   return (
-    <Note tone="error" title={title}>
+    <Note tone="error" title={`${SET_NAME[testSet]}: ${what}`}>
       <p className="whitespace-pre-line">{view.message}</p>
       {view.log_tail && view.log_tail.length > 0 && (
         <details className="mt-1">
