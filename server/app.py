@@ -277,7 +277,7 @@ def build_command(job: dict, o: Options, kind: str, cohort_id: str | None, out: 
     else:
         if not cohort_id:
             raise HTTPException(400, "Confirm the cohort before the evaluation runs.")
-        cmd += ["--confirmed-cohort", cohort_id]
+        cmd += ["--confirmed-cohort", cohort_id, "--export-figures"]  # TIFF, JPEG (600 dpi) and SVG for download
     return cmd
 
 
@@ -389,6 +389,16 @@ def run_view(run_dir: Path) -> dict:
     return view
 
 
+EXPORT_FORMATS = ("tiff", "jpeg", "svg")
+
+
+def figure_exports(out: Path, png_name: str) -> dict[str, str]:
+    """The --export-figures copies of one figure that exist (runs made before exports have none)."""
+    stem = Path(png_name).stem
+    return {ext: f"figures/export/{stem}.{ext}" for ext in EXPORT_FORMATS
+            if (out / "figures" / "export" / f"{stem}.{ext}").is_file()}
+
+
 def results(out: Path, tag: str) -> dict:
     meta = read_json(one(out, f"logs/run_metadata_{tag}.json")) or {}
     metrics = one(out, f"sheets/metrics_{tag}.csv")
@@ -400,8 +410,8 @@ def results(out: Path, tag: str) -> dict:
         "meta": {k: meta.get(k) for k in keep_meta},
         "metrics": sheet_records(metrics, ["group", "metric", "estimate_reported", "ci_95_reported", "unit",
                                            "n_boot_contributed", "n_boot_requested", "note"]) if metrics else [],
-        "figures": [{"file": f"figures/{name}", "title": title} for name, title in meta.get("figure_titles", {}).items()
-                    if (out / "figures" / name).exists()],
+        "figures": [{"file": f"figures/{name}", "title": title, "exports": figure_exports(out, name)}
+                    for name, title in meta.get("figure_titles", {}).items() if (out / "figures" / name).exists()],
         "notices": meta.get("notices", []),
         "report": report.read_text(encoding="utf-8") if report else "",
         "report_file": f"reports/{report.name}" if report else None,

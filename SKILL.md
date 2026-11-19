@@ -84,7 +84,7 @@ Read `reports/summary_<test set>_<run>.md` and `sheets/metrics_<test set>_<run>.
 | Folder | Contents |
 |---|---|
 | `sheets/` | `metrics_*.csv` (full-precision `estimate`, `ci_lower`, `ci_upper`, plus the reported strings `estimate_reported` and `ci_95_reported`) and task tables (confusion matrix, curves, per-video counts, per-pair scores, validation issues) |
-| `figures/` | PNG plots |
+| `figures/` | PNG plots; with `--export-figures`, also `figures/export/` with every plot as TIFF and JPEG at 600 dpi (RGB) and as SVG, for journals |
 | `videos/` | Detection overlay videos (`.mp4`) |
 | `logs/` | `run_*.log` and `run_metadata_*.json`: test set, participant and observation counts, label mapping, thresholds, units (and any weeks-to-days conversion), seed, selected examples, figure titles, CSV hash, package versions |
 | `reports/` | `summary_*.md` |
@@ -93,7 +93,7 @@ Every file name is `<name>_<internal|external>_<run timestamp>.<ext>`, so the te
 
 ## FigureUS(out), the local app
 
-`server/app.py` serves the FigureUS(out) GUI at `http://127.0.0.1:8765` on this computer only (start it with `./start_figureus.command` or `python server/app.py`). The person chooses the task, then the internal test set CSV, the external test set CSV, or both (an upload, a folder for masks and XML files, or a path used in place), matches the columns, and answers the same questions as above once for both. Each CSV is its own evaluate.py run with its own `--test-set`. The server only runs `scripts/evaluate.py`: a check with `--validate-only`, then, after **Proceed** in the app, the evaluation with `--confirm gui --confirmed-cohort <id>` (the id ties the confirmation to that file and those counts). The app shows the two test sets' results side by side. Every value the app shows is read from the files evaluate.py saved. Uploads and results go to `eval_output/gui_jobs/`, which is never committed. `python scripts/verify_server.py` checks the server on synthetic data.
+`server/app.py` serves the FigureUS(out) GUI at `http://127.0.0.1:8765` on this computer only (start it with `./start_figureus.command` or `python server/app.py`). The person chooses the task, then the internal test set CSV, the external test set CSV, or both (an upload, a folder for masks and XML files, or a path used in place), matches the columns, and answers the same questions as above once for both. Each CSV is its own evaluate.py run with its own `--test-set`. The server only runs `scripts/evaluate.py`: a check with `--validate-only`, then, after **Proceed** in the app, the evaluation with `--confirm gui --confirmed-cohort <id> --export-figures` (the id ties the confirmation to that file and those counts). The app shows the two test sets' results side by side; a plot opens large when clicked and can be saved as the TIFF, JPEG (600 dpi) or SVG copy evaluate.py made. Every value the app shows is read from the files evaluate.py saved. Uploads and results go to `eval_output/gui_jobs/`, which is never committed. `python scripts/verify_server.py` checks the server on synthetic data.
 
 ## Reproducibility
 

@@ -26,9 +26,9 @@ export default function App() {
   return (
     <>
       {serverDown && (
-        <div role="alert" className="bg-destructive px-4 py-3 text-center text-[15px] font-medium text-white">
+        <div role="alert" className="bg-destructive px-4 py-3 text-center text-[15px] font-medium text-destructive-foreground">
           The FigureUS(out) server is not running, so nothing can be evaluated. In the skill folder run{" "}
-          <code className="rounded bg-white/15 px-1.5 py-0.5">python server/app.py</code>, then reload this page.
+          <code className="rounded bg-black/10 px-1.5 py-0.5 dark:bg-black/20">python server/app.py</code>, then reload this page.
         </div>
       )}
       {route.name === "start" && <StartPage />}

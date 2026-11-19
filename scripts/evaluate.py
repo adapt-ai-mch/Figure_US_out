@@ -26,6 +26,7 @@ weeks are converted to days before any metric is calculated.
 # ============================================================
 import argparse
 import hashlib
+import io
 import json
 import logging
 import platform
@@ -67,6 +68,9 @@ DAYS_PER_WEEK = 7                                         # weeks are converted 
 # --- Output paths ---
 OUTPUT_DIR = Path("eval_output")                          # default root; override with --out-dir
 OUTPUT_SUBDIRS = ["figures", "sheets", "videos", "logs", "reports"]
+EXPORT_SUBDIR = "export"                                  # figures/export/: the --export-figures copies
+EXPORT_DPI = 600                                          # TIFF and JPEG resolution (and any image inside the SVG)
+EXPORT_JPEG_QUALITY = 95                                  # JPEG quality, 1-95
 
 # --- Statistics ---
 SEED = 42                                                 # fixed seed: bootstrap + visual sampling
@@ -125,6 +129,7 @@ log = logging.getLogger("run")
 DIRS: dict[str, Path] = {}
 SAVED_FILES: list[Path] = []
 FIGURE_TITLES: dict[str, str] = {}
+EXPORT_FIGURES = False                                    # set by --export-figures
 
 
 class Stop(Exception):
@@ -168,14 +173,30 @@ def plot_title(text: str) -> str:
 
 
 def save_figure(fig, stem: str, title: str, dpi: int = 200, tight: bool = True) -> Path:
-    """Save a figure as <stem>_<test set>_<run>.png, record its title and close it."""
+    """Save a figure as <stem>_<test set>_<run>.png (plus the export copies), record its title and close it."""
     path = saved(DIRS["figures"] / f"{stem}_{FILE_TAG}.png")
     if tight:
         fig.tight_layout()
     fig.savefig(path, dpi=dpi, bbox_inches="tight")
+    if EXPORT_FIGURES:
+        export_figure(fig, path.stem)
     plt.close(fig)
     FIGURE_TITLES[path.name] = title
     return path
+
+
+def export_figure(fig, name: str) -> None:
+    """The same figure for journals, in figures/export/: TIFF (LZW) and JPEG at EXPORT_DPI, both RGB, and SVG."""
+    folder = DIRS["figures"] / EXPORT_SUBDIR
+    folder.mkdir(exist_ok=True)
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=EXPORT_DPI, bbox_inches="tight")
+    buf.seek(0)
+    with Image.open(buf) as img:
+        rgb = img.convert("RGB")  # the figure background is opaque, so dropping alpha changes no pixel
+    rgb.save(saved(folder / f"{name}.tiff"), compression="tiff_lzw", dpi=(EXPORT_DPI, EXPORT_DPI))
+    rgb.save(saved(folder / f"{name}.jpeg"), quality=EXPORT_JPEG_QUALITY, dpi=(EXPORT_DPI, EXPORT_DPI))
+    fig.savefig(saved(folder / f"{name}.svg"), format="svg", dpi=EXPORT_DPI, bbox_inches="tight")
 
 
 def step(i: int, total: int, text: str) -> None:
@@ -1556,6 +1577,8 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--status-file", type=Path, metavar="PATH",
                     help="also write the exit code, the closing message and the saved files to this JSON file "
                          "(used by the FigureUS(out) local server)")
+    ap.add_argument("--export-figures", action="store_true",
+                    help=f"also save every figure as TIFF and JPEG at {EXPORT_DPI} dpi and as SVG, in figures/export/")
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--n-boot", type=int, default=N_BOOT, help="leave at 1000 for reported results")
     return ap.parse_args()
@@ -1789,8 +1812,9 @@ def run_once(args, csv_path: Path) -> None:
 # 5. MAIN
 # ============================================================
 def main() -> None:
-    global FILE_TAG, PLOT_PREFIX
+    global FILE_TAG, PLOT_PREFIX, EXPORT_FIGURES
     args = parse_args()
+    EXPORT_FIGURES = args.export_figures
     if args.test_set:
         FILE_TAG = f"{args.test_set}_{RUN_NAME}"
         PLOT_PREFIX = TEST_SET_LABEL[args.test_set]

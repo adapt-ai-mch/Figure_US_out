@@ -13,6 +13,8 @@ Columns with other names are matched in the app (or with `--column`), so the CSV
 
 Every number comes from `scripts/evaluate.py`: confidence intervals resample participants (1,000 bootstrap replicates, seed 42), estimates are reported to 2 decimal places with CIs written `[lower - upper]`, and nothing is dropped or guessed silently.
 
+In the app, click a plot to see it large, and save any plot as TIFF or JPEG at 600 dpi, or as SVG, into the folder you choose. The app follows the computer's light or dark setting, or keeps the theme you pick.
+
 ## Runs locally, never hosted
 
 FigureUS(out) runs on the computer that holds the data. The app's server listens on `127.0.0.1` only, so no other computer can reach it, and after installation nothing needs the internet. Uploaded copies and results stay in `eval_output/`, which git ignores. **Never commit study data or results to this repository.**

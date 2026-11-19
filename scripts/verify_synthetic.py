@@ -20,6 +20,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 # ============================================================
 # 2. CONFIG
@@ -237,6 +238,27 @@ def verify_regression(data: Path, tmp: Path) -> None:
                      "--confirm", "yes", "--title", "x" * 81)
     check("title: longer than 80 characters is asked about, never cut (exit 2)", code == 2 and "--title" in text)
 
+    # --export-figures: every figure again as 600-dpi TIFF and JPEG (RGB) and as SVG; nothing else changes
+    check("export: no figures/export/ without --export-figures", not (out / "figures" / "export").exists())
+    out_x = tmp / "reg_export"
+    code, text = run(out_x, "--task", "regression", "--csv", str(d / "tiny_known.csv"), "--unit", "days",
+                     "--confirm", "yes", "--export-figures")
+    meta_x = json.loads(latest(out_x, "logs", "run_metadata").read_text())
+    pngs = [out_x / "figures" / name for name in meta_x["figure_titles"]]
+    exports = {f: [out_x / "figures" / "export" / f"{f.stem}.{ext}" for ext in ("tiff", "jpeg", "svg")] for f in pngs}
+    check("export: TIFF, JPEG and SVG saved for every figure", code == 0 and len(pngs) == 3
+          and all(p.is_file() for ps in exports.values() for p in ps), text[-600:])
+    ok = True
+    for png, (tiff, jpeg, svg) in exports.items():
+        with Image.open(png) as a, Image.open(tiff) as t, Image.open(jpeg) as j:
+            ok &= t.mode == "RGB" and j.mode == "RGB" and t.size == j.size
+            ok &= all(round(float(v)) == 600 for v in (*t.info["dpi"], *j.info["dpi"]))
+            ok &= abs(t.size[0] - 3 * a.size[0]) <= 6 and abs(t.size[1] - 3 * a.size[1]) <= 6  # 600 vs 200 dpi
+        ok &= "<svg" in svg.read_text(encoding="utf-8")[:2000]
+    check("export: TIFF and JPEG are RGB, tagged 600 dpi, three times the 200-dpi PNG; SVG is SVG", ok)
+    check("export: metrics identical with and without --export-figures",
+          close(metric(out_x, "MAE"), metric(out, "MAE")) and close(metric(out_x, "loa_upper_95"), metric(out, "loa_upper_95")))
+
     # --column: the GUI maps the CSV's own names; the file itself is never changed
     renamed = pd.read_csv(d / "tiny_known.csv", dtype=str).rename(columns={"record_id": "fpath", "true": "TRUE"})
     renamed.to_csv(tmp / "reg_renamed.csv", index=False)
@@ -398,8 +420,12 @@ def verify_segmentation(data: Path, tmp: Path) -> None:
           not list((out / "figures").glob("mask_overlays_*")) and "no 'image' column" in meta["segmentation"]["image_overlays"])
     out_img = tmp / "seg_img"
     code, text = run(out_img, "--task", "segmentation", "--csv", str(d / "segmentation_with_images.csv"),
-                     "--participant-col", "participant_id", "--empty-both", "exclude", "--confirm", "yes")
+                     "--participant-col", "participant_id", "--empty-both", "exclude", "--confirm", "yes",
+                     "--export-figures")
     meta_i = json.loads(latest(out_img, "logs", "run_metadata").read_text())
+    check("export: mask figures saved as TIFF, JPEG and SVG",
+          all((out_img / "figures" / "export" / f"{Path(n).stem}.{ext}").is_file()
+              for n in meta_i["figure_titles"] for ext in ("tiff", "jpeg", "svg")) and len(meta_i["figure_titles"]) == 2)
     statuses = {s["csv_line"]: s["overlay"] for s in meta_i["selected_examples"]}
     check("overlays: image column -> mask_overlays figure titled 'Internal Test: Reference vs Predicted Mask on Image'",
           code == 0 and meta_i["figure_titles"].get(latest(out_img, "figures", "mask_overlays").name)

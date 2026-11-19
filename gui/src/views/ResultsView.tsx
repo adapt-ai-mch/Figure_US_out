@@ -1,12 +1,14 @@
 // Results of one or two evaluate.py runs (internal and external test set) side by side: cohorts, metrics
 // as evaluate.py reported them, plots, notices, downloads. Nothing here calculates a value; it lines up text.
 import { useEffect, useState } from "react"
-import { Download, ExternalLink, FileText, History, Pencil, Plus, Sheet } from "lucide-react"
+import { CheckCircle2, Download, FileText, History, Maximize2, Pencil, Plus, Sheet, XCircle } from "lucide-react"
 
 import { Page, TestSetIcon } from "@/components/app-chrome"
 import { Btn, BtnLink, Field, Note, Progress, Select, TextInput } from "@/components/form"
-import { api, ApiError, newGroup, runAndWait, type MetricRow, type Results, type RunView } from "@/lib/api"
+import { PlotLightbox, type LightboxItem } from "@/components/plot-lightbox"
+import { api, ApiError, newGroup, runAndWait, type Figure, type MetricRow, type Results, type RunView } from "@/lib/api"
 import { go, href } from "@/lib/router"
+import { canChooseFolder, saveFile, type FileKind } from "@/lib/save"
 import { metricName, TASK_BY_KEY, TEST_SET } from "@/lib/tasks"
 import { TITLE_MAX } from "@/views/workspace-model"
 
@@ -492,7 +494,15 @@ function PlotViewer({ runs }: { runs: Run[] }) {
   const kinds: string[] = []
   for (const r of runs) for (const f of r.results.figures) if (!kinds.includes(plotKind(f.title))) kinds.push(plotKind(f.title))
   const [index, setIndex] = useState(0)
+  const [enlarged, setEnlarged] = useState<number | null>(null)
   const kind = kinds[Math.min(index, kinds.length - 1)]
+  const shown = runs.map((r) => ({ run: r, figure: r.results.figures.find((fig) => plotKind(fig.title) === kind) }))
+  // The enlarged view uses the SVG when there is one, so the plot stays sharp at any size.
+  const items: LightboxItem[] = shown.flatMap(({ run, figure }) =>
+    figure
+      ? [{ key: run.view.run_id, src: api.fileUrl(run.view.run_id, figure.exports?.svg ?? figure.file), title: figure.title, testSet: run.testSet }]
+      : [],
+  )
 
   return (
     <section aria-labelledby="plots-h" className="flex min-w-0 flex-col gap-3">
@@ -515,43 +525,95 @@ function PlotViewer({ runs }: { runs: Run[] }) {
             </Field>
           </div>
           <div className={runs.length > 1 ? "grid grid-cols-1 gap-6 xl:grid-cols-2" : "grid grid-cols-1"}>
-            {runs.map((r) => {
-              const f = r.results.figures.find((fig) => plotKind(fig.title) === kind)
-              return (
-                <figure key={r.view.run_id} className="flex min-w-0 flex-col gap-2">
-                  {runs.length > 1 && <TestSetName run={r} className="text-[15px]" />}
-                  <div className="flex min-h-[280px] items-center justify-center overflow-hidden rounded-xl border bg-white p-2">
-                    {f ? (
+            {shown.map(({ run: r, figure: f }) => (
+              <figure key={r.view.run_id} className="flex min-w-0 flex-col gap-3">
+                {runs.length > 1 && <TestSetName run={r} className="text-[15px]" />}
+                {/* Plots stay on white in both themes: evaluate.py draws them on white. */}
+                <div className="flex min-h-[280px] items-center justify-center overflow-hidden rounded-xl border bg-white p-2">
+                  {f ? (
+                    <button
+                      type="button"
+                      onClick={() => setEnlarged(items.findIndex((it) => it.key === r.view.run_id))}
+                      className="group relative cursor-zoom-in rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                    >
                       <img
                         key={f.file}
                         src={api.fileUrl(r.view.run_id, f.file)}
                         alt={f.title}
                         className="h-auto max-h-[72vh] w-auto max-w-full object-contain"
                       />
-                    ) : (
-                      <p className="px-4 text-center text-muted-foreground">evaluate.py did not make this plot for the {TEST_SET[r.testSet].label.toLowerCase()} set.</p>
-                    )}
-                  </div>
-                  <figcaption className="sr-only">{f?.title ?? kind}</figcaption>
-                  {f && (
-                    <div className="flex flex-wrap gap-3">
-                      <BtnLink href={api.fileUrl(r.view.run_id, f.file, true)} download>
-                        <Download aria-hidden />
-                        Download (.png)
-                      </BtnLink>
-                      <BtnLink variant="ghost" href={api.fileUrl(r.view.run_id, f.file)} target="_blank" rel="noreferrer">
-                        <ExternalLink aria-hidden />
-                        Open full size
-                      </BtnLink>
-                    </div>
+                      <span className="pointer-events-none absolute right-2 bottom-2 inline-flex items-center gap-1.5 rounded-full bg-slate-900/80 px-3 py-1.5 text-[13px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none">
+                        <Maximize2 aria-hidden className="size-3.5" />
+                        Click to enlarge
+                      </span>
+                    </button>
+                  ) : (
+                    <p className="px-4 text-center text-muted-foreground">evaluate.py did not make this plot for the {TEST_SET[r.testSet].label.toLowerCase()} set.</p>
                   )}
-                </figure>
-              )
-            })}
+                </div>
+                <figcaption className="sr-only">{f?.title ?? kind}</figcaption>
+                {f && <PlotDownloads runId={r.view.run_id} figure={f} />}
+              </figure>
+            ))}
           </div>
+          <PlotLightbox items={items} index={enlarged} onIndex={setEnlarged} onClose={() => setEnlarged(null)} />
         </>
       )}
     </section>
+  )
+}
+
+const EXPORT_LABEL = { tiff: "TIFF", jpeg: "JPEG", svg: "SVG" } as const
+
+/** Save a plot as the TIFF or JPEG (600 dpi) or SVG evaluate.py made, wherever the person chooses. */
+function PlotDownloads({ runId, figure }: { runId: string; figure: Figure }) {
+  const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null)
+  const formats = (["tiff", "jpeg", "svg"] as const).filter((k) => figure.exports?.[k])
+  const folder = canChooseFolder()
+
+  async function save(kind: FileKind, file: string) {
+    const name = file.split("/").pop() ?? file
+    try {
+      const how = await saveFile(api.fileUrl(runId, file), name, kind)
+      if (how === "saved") setSaid({ ok: true, text: `Saved ${name}.` })
+      else if (how === "downloaded") setSaid({ ok: true, text: `${name} was handed to this browser's downloads.` })
+      else setSaid(null)
+    } catch (e) {
+      setSaid({ ok: false, text: `${name} was not saved: ${message(e)}` })
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div role="group" aria-label={`Save ${figure.title}`} className="flex flex-wrap items-center gap-2">
+        {formats.map((k) => (
+          <Btn key={k} variant="outline" onClick={() => void save(k, figure.exports![k]!)}>
+            <Download aria-hidden />
+            {EXPORT_LABEL[k]}
+          </Btn>
+        ))}
+        <Btn variant="ghost" onClick={() => void save("png", figure.file)}>
+          <Download aria-hidden />
+          PNG (screen size)
+        </Btn>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        {formats.length > 0
+          ? "TIFF and JPEG are 600 dpi; SVG is vector, so it stays sharp at any size. "
+          : "This run was saved before TIFF, JPEG and SVG copies were made; edit the title, or evaluate the CSV again, to get them. "}
+        {folder
+          ? "You choose the folder and the file name."
+          : "This browser saves into its download folder. To choose the folder each time, turn on asking where to save downloads in its settings, or open FigureUS(out) in Chrome or Edge."}
+      </p>
+      <p aria-live="polite" className="text-sm empty:hidden">
+        {said && (
+          <span className={`inline-flex items-start gap-1.5 font-medium ${said.ok ? "text-foreground" : "text-destructive"}`}>
+            {said.ok ? <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0" /> : <XCircle aria-hidden className="mt-0.5 size-4 shrink-0" />}
+            {said.text}
+          </span>
+        )}
+      </p>
+    </div>
   )
 }
 

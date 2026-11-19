@@ -35,6 +35,7 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -75,6 +76,7 @@
     --accent: #E3EAF3;
     --accent-foreground: #1E3A5F;
     --destructive: #B91C1C;
+    --destructive-foreground: #FFFFFF;
     --border: #E2E8F0;
     --input: #CBD5E1;
     --ring: #2563EB;
@@ -83,6 +85,9 @@
     --warning-fg: #92400E;
     --warning-bg: #FFFBEB;
     --warning-border: #FCD34D;
+    --brand-mid-1: #2B5C8A;
+    --brand-mid-2: #7A6A2E;
+    --scrim: 248 250 252;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -99,25 +104,36 @@
     --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* Dark: a deep navy ground; Internal stays blue and External stays ochre, lightened to read on it.
+   Plots keep their white background (they are drawn on white by evaluate.py). */
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --background: #0B1220;
+    --foreground: #E5ECF4;
+    --card: #111A2B;
+    --card-foreground: #E5ECF4;
+    --popover: #111A2B;
+    --popover-foreground: #E5ECF4;
+    --primary: #9CC2EC;
+    --primary-foreground: #0B1726;
+    --secondary: #1A2740;
+    --secondary-foreground: #D3E2F4;
+    --muted: #162135;
+    --muted-foreground: #9AA9BD;
+    --accent: #1A2740;
+    --accent-foreground: #D3E2F4;
+    --destructive: #F87171;
+    --destructive-foreground: #1F0707;
+    --border: #24324D;
+    --input: #3A4B68;
+    --ring: #60A5FA;
+    --internal: #8DB4E2;
+    --external: #E3A93B;
+    --warning-fg: #FCD34D;
+    --warning-bg: #231A06;
+    --warning-border: #7C5A12;
+    --brand-mid-1: #7FA6D6;
+    --brand-mid-2: #CDA85A;
+    --scrim: 11 18 32;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -149,7 +165,7 @@
 /* The FigureUS(out) name: navy (Internal Test) running into ochre (External Test).
    The bottom padding keeps the descender of the "g" inside the painted area. */
 @utility text-brand {
-    background-image: linear-gradient(100deg, var(--internal) 0%, #2B5C8A 42%, #7A6A2E 72%, var(--external) 100%);
+    background-image: linear-gradient(100deg, var(--internal) 0%, var(--brand-mid-1) 42%, var(--brand-mid-2) 72%, var(--external) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

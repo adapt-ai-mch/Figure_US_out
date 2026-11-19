@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react"
 import { ArrowRight, History } from "lucide-react"
 
-import { FanLogo } from "@/components/app-chrome"
+import { FanLogo, ThemeSwitch } from "@/components/app-chrome"
 import { ImageStreamHero, type StreamImage } from "@/components/ui/image-stream-hero"
 import { LiquidButton } from "@/components/ui/liquid-glass-button"
 import { go, href } from "@/lib/router"
@@ -16,10 +16,11 @@ const HERO_IMAGES: StreamImage[] = Array.from({ length: 9 }, (_, i) => ({
   src: `/hero/card_${String(i + 1).padStart(2, "0")}.jpg`,
 }))
 
-// Soft light wash behind the title and the buttons, so text stays readable over the cards.
+// Soft wash in the page colour (--scrim, light or dark) behind the title and the buttons,
+// so text stays readable over the cards.
 const SCRIM =
-  "radial-gradient(ellipse 46% 30% at 50% 20%, rgb(248 250 252 / 0.97) 0%, rgb(248 250 252 / 0.9) 55%, rgb(248 250 252 / 0) 100%)," +
-  "radial-gradient(ellipse 56% 22% at 50% 85%, rgb(248 250 252 / 0.95) 0%, rgb(248 250 252 / 0.82) 55%, rgb(248 250 252 / 0) 100%)"
+  "radial-gradient(ellipse 46% 30% at 50% 20%, rgb(var(--scrim) / 0.97) 0%, rgb(var(--scrim) / 0.9) 55%, rgb(var(--scrim) / 0) 100%)," +
+  "radial-gradient(ellipse 56% 22% at 50% 85%, rgb(var(--scrim) / 0.95) 0%, rgb(var(--scrim) / 0.82) 55%, rgb(var(--scrim) / 0) 100%)"
 
 const NARROW = "(max-width: 639px)"
 
@@ -48,6 +49,7 @@ export function StartPage() {
         className="w-full rounded-xl border border-border bg-background sm:h-[min(720px,calc(100svh-2rem))] sm:min-h-[600px]"
       >
         <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: SCRIM }} />
+        <ThemeSwitch className="absolute top-3 right-3 z-20 sm:top-4 sm:right-4" />
         {/* On a phone the hero grows with its content; the large gap leaves room for the corridor. */}
         <div className="relative z-10 flex h-full flex-col items-center justify-between gap-44 px-6 py-11 text-center sm:gap-6">
           <div className="flex flex-col items-center gap-3">
@@ -71,7 +73,7 @@ export function StartPage() {
                   <li key={t.key}>
                     <LiquidButton
                       onClick={() => go(`/task/${t.key}`)}
-                      className="group overflow-hidden rounded-full bg-white/70 text-base font-semibold text-primary"
+                      className="group overflow-hidden rounded-full bg-white/70 text-base font-semibold text-primary dark:bg-card/70"
                     >
                       <span className="inline-flex items-center gap-2.5">
                         <t.icon aria-hidden className="size-5" />

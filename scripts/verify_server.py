@@ -144,6 +144,15 @@ def main() -> None:
             rid = view["run_id"]
             code, _ = c.request("GET", f"/api/runs/{rid}/files/{res['report_file']}")
             check("saved files are served", code == 200)
+            figs = res.get("figures", [])
+            check("every figure lists its TIFF, JPEG and SVG copies (--export-figures)",
+                  bool(figs) and all(set(f.get("exports", {})) == {"tiff", "jpeg", "svg"} for f in figs), str(figs)[:300])
+            ex = figs[0]["exports"] if figs else {}
+            got = {k: c.request("GET", f"/api/runs/{rid}/files/{v}?download=true") for k, v in ex.items()}
+            check("the TIFF, JPEG and SVG are served",
+                  bool(got) and all(code == 200 for code, _ in got.values())
+                  and got["tiff"][1][:4] in (b"II*\x00", b"MM\x00*") and got["jpeg"][1][:2] == b"\xff\xd8"
+                  and b"<svg" in got["svg"][1][:2000])
             code, raw = c.request("GET", f"/api/runs/{rid}/download")
             check("all results download as one zip", code == 200 and raw[:2] == b"PK")
             code, _ = c.request("GET", f"/api/runs/{rid}/files/..%2F..%2Fjob.json")

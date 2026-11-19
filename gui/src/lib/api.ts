@@ -85,13 +85,16 @@ export type Results = {
     participant_link: string
   }
   metrics: MetricRow[]
-  figures: { file: string; title: string }[]
+  figures: Figure[]
   notices: string[]
   report: string
   report_file: string | null
   metrics_file: string | null
   files: { file: string; bytes: number }[]
 }
+
+/** A saved plot; exports are its --export-figures copies (TIFF and JPEG at 600 dpi, SVG), when the run made them. */
+export type Figure = { file: string; title: string; exports?: Partial<Record<"tiff" | "jpeg" | "svg", string>> }
 
 export type RunStatus = "ok" | "error" | "needs_input" | "retry" | "missing_column" | "invalid"
 

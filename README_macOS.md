@@ -75,6 +75,7 @@ python scripts/evaluate.py --task segmentation --test-set external --csv ~/data/
 - Leave out `--csv` to choose the file in a Finder dialog.
 - Add `--inspect` to check the columns and see counts without evaluating.
 - Add `--out-dir <folder>` to choose where results go (default `eval_output/` in the current folder).
+- Add `--export-figures` to also save every plot as TIFF and JPEG at 600 dpi and as SVG, in `figures/export/` (the app always does).
 - `python scripts/evaluate.py --help` lists every option.
 
 ## 5. The pop-up
@@ -83,7 +84,7 @@ After validation a macOS alert shows **Total participants: N** and the other cou
 
 ## 6. Results
 
-Inside the output folder: `sheets/` (CSV), `figures/` (PNG), `videos/` (MP4 overlays), `logs/` (run log and `run_metadata_*.json`), `reports/` (Markdown summary). File names are `<name>_<internal|external>_<run time>`, for example `bland_altman_internal_20261119_112523.png`, so the test set is visible and nothing is overwritten. Overlay videos open in QuickTime Player.
+Inside the output folder: `sheets/` (CSV), `figures/` (PNG; with `--export-figures`, also `figures/export/` with each plot as TIFF and JPEG at 600 dpi and as SVG, for journals), `videos/` (MP4 overlays), `logs/` (run log and `run_metadata_*.json`), `reports/` (Markdown summary). File names are `<name>_<internal|external>_<run time>`, for example `bland_altman_internal_20261119_112523.png`, so the test set is visible and nothing is overwritten. Overlay videos open in QuickTime Player.
 
 The report and console show every estimate to 2 decimal places (counts as whole numbers) with its 95% CI as `[lower - upper]`, for example `3.80 [3.54 - 4.06]`. The metrics CSV keeps the full-precision numbers as well, in `estimate`, `ci_lower` and `ci_upper`.
 
@@ -103,10 +104,13 @@ The browser opens **http://127.0.0.1:8765**. Keep the Terminal window open while
 3. Answer the set-up questions (unit, labels, threshold range…); they apply to both test sets. Then **Check both CSVs** (or **Check the CSV**). Problems are listed by CSV line for each test set; questions evaluate.py asks appear next to their field.
 4. Confirm the cohorts (**Total participants: N** for each test set) with **Proceed**, or **Retry**. Proceed evaluates the internal test set, then the external.
 5. Results, internal and external side by side: metrics with 95% CIs as reported by evaluate.py (one column pair per test set), a plot menu that shows the chosen plot for each test set, notices, and downloads (zip, report, metrics) per test set. Edit the title on the results page; saving re-runs with the same seed, so the numbers do not change. **Recent runs** reopens earlier results; a pair evaluated together opens together.
+6. Plots: click a plot to see it large over the blurred page (Esc, the × or a click outside it closes it; with both test sets, ← → switch between them). Under each plot, **TIFF** and **JPEG** save it at 600 dpi and **SVG** as a vector drawing; **PNG** is the screen-size copy. In Chrome or Edge the Mac's Save dialog opens, so you choose the folder and the name. Safari and Firefox save into their download folder unless you turn on asking where to save (Safari: Settings → General → File download location → Ask for each download; Firefox: Settings → Files and Applications → Always ask you where to save files). Runs made before this feature have only the PNG; edit the title or evaluate again to get the other formats.
+
+The round buttons at the top right choose the theme: **Device** (follows the Mac's Light or Dark appearance, also when it changes), **Light** or **Dark**. The choice is remembered in this browser. Plots keep their white background in every theme.
 
 Uploaded copies and every result are kept in `eval_output/gui_jobs/` on this computer. That folder is never committed to git; delete it when the files are no longer needed.
 
-Check the app's server with `python scripts/verify_server.py` (synthetic data only; the last line should read `17 of 17 server checks passed`).
+Check the app's server with `python scripts/verify_server.py` (synthetic data only; the last line should read `19 of 19 server checks passed`).
 
 The built app is in `gui/dist`, so only Python is needed to run it. To change the app itself you also need Node 20 or newer: see `gui/README.md`.
 
