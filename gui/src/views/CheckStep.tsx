@@ -197,7 +197,7 @@ function CheckResult({
         >
           <p>No row is dropped silently. Fix the CSV and check it again, or exclude exactly these rows.</p>
         </Note>
-        <div className="max-h-[360px] overflow-auto rounded-lg border bg-card">
+        <div data-lenis-prevent className="max-h-[360px] overflow-auto rounded-lg border bg-card">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Problems found, by CSV line</caption>
             <thead className="sticky top-0 bg-muted">
@@ -269,7 +269,7 @@ function Failure({ view, testSet }: { view: RunView; testSet: TestSetKey }) {
       {view.log_tail && view.log_tail.length > 0 && (
         <details className="mt-1">
           <summary className="cursor-pointer text-sm font-medium">End of the log</summary>
-          <pre className="mt-2 max-h-72 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap text-foreground">
+          <pre data-lenis-prevent className="mt-2 max-h-72 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap text-foreground">
             {view.log_tail.join("\n")}
           </pre>
         </details>

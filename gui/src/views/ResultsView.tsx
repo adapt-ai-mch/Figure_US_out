@@ -208,7 +208,7 @@ function ResultsBody({ runs }: { runs: Run[] }) {
               {r.results.report && (
                 <details className="max-w-4xl rounded-lg border bg-card px-4 py-3">
                   <summary className="cursor-pointer font-medium">Report text (Markdown)</summary>
-                  <pre className="mt-3 max-h-[480px] overflow-auto text-[13px] leading-relaxed whitespace-pre-wrap">{r.results.report}</pre>
+                  <pre data-lenis-prevent className="mt-3 max-h-[480px] overflow-auto text-[13px] leading-relaxed whitespace-pre-wrap">{r.results.report}</pre>
                 </details>
               )}
             </div>

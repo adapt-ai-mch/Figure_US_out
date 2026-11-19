@@ -1,6 +1,7 @@
 // The enlarged plot: a modal over the page, with the page blurred behind it. Esc, the close button or a
 // click anywhere outside the plot closes it. With both test sets, the toggle (or ← →) switches between them.
 import { useEffect, useRef, type MouseEvent } from "react"
+import { useLenis } from "lenis/react"
 import { X } from "lucide-react"
 
 import { TestSetIcon } from "@/components/app-chrome"
@@ -44,16 +45,19 @@ export function PlotLightbox({
     if (!open && d.open) d.close()
   }, [open])
 
-  // Keep the page behind still while the plot is open.
+  // Keep the page behind still while the plot is open (Lenis would otherwise keep scrolling it).
+  const lenis = useLenis()
   useEffect(() => {
     if (!open) return
     const root = document.documentElement
     const before = root.style.overflow
     root.style.overflow = "hidden"
+    lenis?.stop()
     return () => {
       root.style.overflow = before
+      lenis?.start()
     }
-  }, [open])
+  }, [open, lenis])
 
   const many = items.length > 1
   const step = (by: number) => {
