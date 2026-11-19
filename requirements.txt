@@ -1,0 +1,10 @@
+# Model-prediction evaluator — CPU only, no network needed after installation.
+# Python 3.10 or newer. Verified with: Python 3.13, numpy 2.5.3, pandas 3.0.5, scipy 1.18.1,
+# matplotlib 3.11.2, pillow 12.3.0, opencv 5.0.0.
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+matplotlib>=3.8
+pillow>=10.0
+opencv-python-headless>=4.8
+tqdm>=4.66

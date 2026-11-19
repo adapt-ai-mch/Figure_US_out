@@ -1,0 +1,20 @@
+# Python environment (rebuild with: python3 -m venv .venv && pip install -r requirements.txt)
+.venv/
+__pycache__/
+*.pyc
+
+# Evaluation outputs: produced from real study data, never committed
+eval_output/
+synthetic_data/
+
+# Local Claude Code settings and installed third-party skills
+.claude/
+.agents/
+skills-lock.json
+
+# GUI dependencies and builds (rebuild with: cd gui && npm install)
+node_modules/
+gui/dist/
+
+# macOS
+.DS_Store
