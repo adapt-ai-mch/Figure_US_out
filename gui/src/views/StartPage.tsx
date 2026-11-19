@@ -26,21 +26,15 @@ function testSets(task: TaskKey, mode?: Mode) {
   ]
 }
 
-const recent = (task: TaskKey) => ({
-  title: "Results",
-  items: [{ label: "Open a recent run", description: "Saved on this computer", icon: History, href: href(`/runs/${task}`) }],
-})
-
 // What each task's dropdown offers once its liquid-glass button is clicked.
 const TASK_MENUS: Record<TaskKey, NavItem["subMenus"]> = {
   classification: [
     { title: "Standard", items: testSets("classification", "standard") },
     { title: "FGR", items: testSets("classification", "fgr") },
-    recent("classification"),
   ],
-  regression: [{ title: "Evaluate", items: testSets("regression") }, recent("regression")],
-  detection: [{ title: "Evaluate", items: testSets("detection") }, recent("detection")],
-  segmentation: [{ title: "Evaluate", items: testSets("segmentation") }, recent("segmentation")],
+  regression: [{ title: "Evaluate", items: testSets("regression") }],
+  detection: [{ title: "Evaluate", items: testSets("detection") }],
+  segmentation: [{ title: "Evaluate", items: testSets("segmentation") }],
 }
 
 // One dropdown per task; the id maps back to TASKS (id - 1).
