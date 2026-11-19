@@ -4,7 +4,6 @@ import { useEffect, useRef, type MouseEvent } from "react"
 import { useLenis } from "lenis/react"
 import { X } from "lucide-react"
 
-import { TestSetIcon } from "@/components/app-chrome"
 import { TEST_SET } from "@/lib/tasks"
 import { cn } from "@/lib/utils"
 
@@ -94,20 +93,21 @@ export function PlotLightbox({
             if (e.target === e.currentTarget) onClose()
           }}
         >
-          {/* Icon | title | close; the test-set toggle sits between title and close, or on its own row on a phone. */}
+          {/* Title | close; the test-set toggle sits between them, or on its own row on a phone.
+              The left edge takes the test-set colour. */}
           <div
             className={cn(
-              "grid w-full shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-xl border bg-card/95 py-2 pr-2 pl-4 shadow-lg",
-              many && "sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]",
+              "grid w-full shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-xl border border-l-4 bg-card/95 py-2 pr-2 pl-4 shadow-lg",
+              many && "sm:grid-cols-[minmax(0,1fr)_auto_auto]",
             )}
+            style={{ borderLeftColor: TEST_SET[item.testSet].color }}
           >
-            <TestSetIcon testSet={item.testSet} />
             <h2 className="font-heading text-lg leading-snug font-semibold [overflow-wrap:anywhere]">{item.title}</h2>
             {many && (
               <div
                 role="group"
                 aria-label="Test set"
-                className="col-span-3 row-start-2 flex gap-1 justify-self-start rounded-lg bg-muted p-1 sm:col-span-1 sm:col-start-3 sm:row-start-1"
+                className="col-span-2 row-start-2 flex gap-1 justify-self-start rounded-lg bg-muted p-1 sm:col-span-1 sm:col-start-2 sm:row-start-1"
               >
                 {items.map((it, i) => (
                   <button
@@ -116,11 +116,11 @@ export function PlotLightbox({
                     aria-pressed={i === index}
                     onClick={() => onIndex(i)}
                     className={cn(
-                      "flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md px-3 text-sm font-semibold text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40",
-                      i === index && "bg-card text-foreground shadow-sm",
+                      "flex min-h-9 cursor-pointer items-center rounded-md px-3 text-sm font-semibold text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40",
+                      i === index && "bg-card shadow-sm",
                     )}
+                    style={i === index ? { color: TEST_SET[it.testSet].color } : undefined}
                   >
-                    <TestSetIcon testSet={it.testSet} className="size-4" />
                     {TEST_SET[it.testSet].label}
                   </button>
                 ))}
@@ -130,8 +130,8 @@ export function PlotLightbox({
               type="button"
               onClick={onClose}
               className={cn(
-                "col-start-3 row-start-1 flex size-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40",
-                many && "sm:col-start-4",
+                "col-start-2 row-start-1 flex size-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40",
+                many && "sm:col-start-3",
               )}
             >
               <X aria-hidden className="size-6" />

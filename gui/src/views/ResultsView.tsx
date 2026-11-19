@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { CheckCircle2, Download, FileText, History, Maximize2, Pencil, Plus, Sheet, XCircle } from "lucide-react"
 
-import { Page, TestSetIcon } from "@/components/app-chrome"
+import { Page } from "@/components/app-chrome"
 import { Btn, BtnLink, Field, Note, Progress, Select, TextInput } from "@/components/form"
 import { PlotLightbox, type LightboxItem } from "@/components/plot-lightbox"
 import { api, ApiError, newGroup, runAndWait, type Figure, type MetricRow, type Results, type RunView } from "@/lib/api"
@@ -83,8 +83,7 @@ export function ResultsView({ runIds }: { runIds: string[] }) {
 
 function TestSetName({ run, className }: { run: Run; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 font-semibold ${className ?? ""}`} style={{ color: TEST_SET[run.testSet].color }}>
-      <TestSetIcon testSet={run.testSet} className="size-[18px]" />
+    <span className={`font-semibold ${className ?? ""}`} style={{ color: TEST_SET[run.testSet].color }}>
       {TEST_SET[run.testSet].label}
     </span>
   )

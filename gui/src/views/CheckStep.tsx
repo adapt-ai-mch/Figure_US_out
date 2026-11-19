@@ -1,7 +1,6 @@
 // Step 3: what evaluate.py found when it checked each CSV, and the cohort confirmation (Proceed / Retry).
 import { ArrowRight, Download, RotateCcw, Users } from "lucide-react"
 
-import { TestSetIcon } from "@/components/app-chrome"
 import { Btn, BtnLink, Note, Progress } from "@/components/form"
 import { api, type RunView } from "@/lib/api"
 import { TEST_SET } from "@/lib/tasks"
@@ -56,8 +55,7 @@ export function CheckStep(p: Props) {
 
       {p.busy && (
         <div className="max-w-xl rounded-lg border bg-card px-5 py-4">
-          <p className="mb-3 flex items-center gap-2 text-[15px] font-semibold" style={{ color: TEST_SET[p.busy.testSet].color }}>
-            <TestSetIcon testSet={p.busy.testSet} className="size-[18px]" />
+          <p className="mb-3 text-[15px] font-semibold" style={{ color: TEST_SET[p.busy.testSet].color }}>
             {SET_NAME[p.busy.testSet]}
           </p>
           <Progress
@@ -132,8 +130,7 @@ function CheckResult({
 }) {
   const color = TEST_SET[testSet].color
   const heading = (
-    <p className="flex items-center gap-2 text-[15px] font-semibold" style={{ color }}>
-      <TestSetIcon testSet={testSet} className="size-[18px]" />
+    <p className="text-[15px] font-semibold" style={{ color }}>
       {SET_NAME[testSet]}
     </p>
   )

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Check } from "lucide-react"
 
-import { Page, TestSetIcon } from "@/components/app-chrome"
+import { Page } from "@/components/app-chrome"
 import { api, ApiError, newGroup, runAndWait, type Job, type RunView } from "@/lib/api"
 import { go } from "@/lib/router"
 import { TASK_BY_KEY, TEST_SET, type TaskKey } from "@/lib/tasks"
@@ -285,8 +285,7 @@ export function Workspace({ taskKey, mode }: { taskKey: TaskKey; mode: Setup["mo
                 className="border-l-4 pl-4 sm:pl-6"
                 style={{ borderColor: TEST_SET[k].color }}
               >
-                <h3 id={`${k}-slot-h`} className="mb-4 flex items-center gap-2 font-heading text-xl font-semibold" style={{ color: TEST_SET[k].color }}>
-                  <TestSetIcon testSet={k} />
+                <h3 id={`${k}-slot-h`} className="mb-4 font-heading text-xl font-semibold" style={{ color: TEST_SET[k].color }}>
                   {cap(SET_NAME[k])}
                 </h3>
                 <DataStep
