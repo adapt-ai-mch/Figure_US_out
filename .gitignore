@@ -12,9 +12,9 @@ synthetic_data/
 .agents/
 skills-lock.json
 
-# GUI dependencies and builds (rebuild with: cd gui && npm install)
+# GUI dependencies (reinstall with: npm --prefix gui install). gui/dist/ is committed on purpose:
+# the built GUI lets a computer run FigureUS(out) with Python alone, without Node.
 node_modules/
-gui/dist/
 
 # macOS
 .DS_Store

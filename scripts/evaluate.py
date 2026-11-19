@@ -208,6 +208,31 @@ def read_csv_strict(path: Path) -> pd.DataFrame:
     return df
 
 
+def apply_column_mapping(df: pd.DataFrame, pairs: list[str]) -> dict[str, str]:
+    """Rename CSV columns to the names evaluate.py expects (--column record_id=fpath). Returns {expected: original}.
+
+    The CSV file itself is never changed, so the run record's fingerprint is the original file's.
+    """
+    mapping: dict[str, str] = {}
+    for item in pairs:
+        target, sep, source = (s.strip() for s in item.partition("="))
+        if not sep or not target or not source:
+            raise Stop(EXIT_ERROR, f"--column needs NAME=CSV_COLUMN, for example --column true=TRUE (got '{item}').")
+        if source not in df.columns:
+            raise Stop(EXIT_MISSING_COLUMN, MISSING_COLUMN_MSG.format(col=source))
+        if target != source and target in df.columns:
+            raise Stop(EXIT_NEEDS_INPUT, f"NEEDS INPUT: the CSV has a column named '{target}' as well as '{source}'. "
+                                         f"Ask which one holds {target}, then map only that one.")
+        mapping[target] = source
+    if len(set(mapping.values())) != len(mapping):
+        raise Stop(EXIT_NEEDS_INPUT, "NEEDS INPUT: one CSV column is mapped to two names. Ask which name it is.")
+    df.rename(columns={s: t for t, s in mapping.items() if s != t}, inplace=True)
+    for t, s in mapping.items():
+        if s != t:
+            log.info(f"Column mapping: {t} <- {s}")
+    return mapping
+
+
 def check_columns(df: pd.DataFrame, task: str) -> list[str]:
     """Return the required columns that are absent."""
     return [c for c in REQUIRED_COLUMNS[task] if c not in df.columns]
@@ -1519,8 +1544,18 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--frame-offset", type=int, default=0, help="video frame index = XML frame number + offset")
     ap.add_argument("--exclude-invalid", action="store_true",
                     help="exclude rows with reported problems (only after the user agrees)")
-    ap.add_argument("--confirm", choices=["popup", "console", "yes"], default="popup",
+    ap.add_argument("--column", action="append", default=[], metavar="NAME=CSV_COLUMN",
+                    help="use a differently named CSV column, e.g. --column record_id=fpath --column true=TRUE "
+                         "(repeatable; the CSV file is not changed)")
+    ap.add_argument("--validate-only", action="store_true",
+                    help="check the CSV and save the cohort counts (logs/cohort_*.json) without calculating anything")
+    ap.add_argument("--confirmed-cohort", metavar="ID",
+                    help="with --confirm gui: the cohort id the GUI showed with Proceed / Retry")
+    ap.add_argument("--confirm", choices=["popup", "console", "yes", "gui"], default="popup",
                     help="'yes' skips the pop-up and is for synthetic verification only")
+    ap.add_argument("--status-file", type=Path, metavar="PATH",
+                    help="also write the exit code, the closing message and the saved files to this JSON file "
+                         "(used by the FigureUS(out) local server)")
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--n-boot", type=int, default=N_BOOT, help="leave at 1000 for reported results")
     return ap.parse_args()
@@ -1531,6 +1566,8 @@ def check_task_options(args) -> None:
     if not args.test_set and not args.inspect:
         raise Stop(EXIT_NEEDS_INPUT, "NEEDS INPUT: ask whether this CSV is the internal or the external test set, "
                                      "then pass --test-set internal or --test-set external.")
+    if args.confirm == "gui" and not args.confirmed_cohort and not (args.inspect or args.validate_only):
+        raise Stop(EXIT_ERROR, "--confirm gui needs --confirmed-cohort, the id the GUI showed with the cohort counts.")
     if args.title is not None:
         args.title = " ".join(args.title.split()) or None  # one line, single spaces
         if args.title and len(args.title) > TITLE_MAX:
@@ -1598,6 +1635,9 @@ def run_once(args, csv_path: Path) -> None:
 
     step(1, total, f"Reading CSV: {csv_path.name}")
     df = read_csv_strict(csv_path)
+    column_mapping = apply_column_mapping(df, args.column)
+    if args.participant_col in column_mapping.values():  # the participant column may have been renamed
+        args.participant_col = next(t for t, s in column_mapping.items() if s == args.participant_col)
     missing = check_columns(df, task)
     if missing:
         raise Stop(EXIT_MISSING_COLUMN, "\n".join(MISSING_COLUMN_MSG.format(col=c) for c in missing))
@@ -1677,13 +1717,31 @@ def run_once(args, csv_path: Path) -> None:
         log.info(b)
     for n in notices:
         log.info(f"NOTICE: {n}")
-    if not confirm_cohort(headline, "\n".join(body), args.confirm):
+    csv_sha = sha256_file(csv_path)
+    # Ties a GUI confirmation to this exact file and these exact counts.
+    cohort_id = hashlib.sha256(f"{csv_sha}|{n_p}|{n_obs}|{len(df)}|{len(bad_lines)}".encode()).hexdigest()[:16]
+    if args.validate_only:
+        cohort = {"total_participants": n_p, "observations": n_obs, "observation_unit": unit, "rows_in_csv": len(df),
+                  "rows_excluded": len(bad_lines), "excluded_csv_lines": bad_lines, "notices": notices,
+                  "column_mapping": column_mapping, "cohort_id": cohort_id}
+        path = saved(DIRS["logs"] / f"cohort_{FILE_TAG}.json")
+        path.write_text(json.dumps(cohort, indent=2), encoding="utf-8")
+        raise Stop(EXIT_OK, f"VALIDATED: cohort {cohort_id} saved; nothing was calculated. Show the counts with "
+                            "Proceed / Retry, then run again with --confirm gui --confirmed-cohort <id>.")
+    if args.confirm == "gui":
+        if args.confirmed_cohort != cohort_id:
+            raise Stop(EXIT_RETRY, "RETRY: the CSV or the options changed the cohort since it was confirmed in the "
+                                   "GUI. Check the CSV again.")
+        log.info(f"Cohort {cohort_id} confirmed in the FigureUS(out) GUI (same file, same counts).")
+    elif not confirm_cohort(headline, "\n".join(body), args.confirm):
         raise Stop(EXIT_RETRY, "RETRY: the user chose Retry. Return to CSV selection.")
-    log.info("User chose Proceed.")
+    else:
+        log.info("User chose Proceed.")
 
     meta = {"run_name": RUN_NAME, "test_set": TEST_SET_LABEL[args.test_set], "title": args.title,
             "task": task, "mode": args.mode if task == "classification" else None,
-            "csv_file": str(csv_path), "csv_sha256": sha256_file(csv_path), "n_rows_csv": len(df),
+            "column_mapping": column_mapping or None, "cohort_id": cohort_id,
+            "csv_file": str(csv_path), "csv_sha256": csv_sha, "n_rows_csv": len(df),
             "n_rows_excluded": len(bad_lines), "excluded_csv_lines": bad_lines, "n_participants": n_p,
             "n_observations": n_obs, "observation_unit": unit,
             "participant_link": ("visit identifier" if (task == "classification" and args.mode == "fgr") or args.id_format == "visit"
@@ -1749,7 +1807,7 @@ def main() -> None:
     log.info(f"Seed {args.seed} | bootstrap replicates {args.n_boot} | device: CPU (offline)")
     log.info("=" * 60)
 
-    code = EXIT_OK
+    code, message = EXIT_OK, ""
     try:
         check_task_options(args)
         while True:
@@ -1764,7 +1822,7 @@ def main() -> None:
                     continue
                 raise
     except Stop as s:
-        code = s.code
+        code, message = s.code, s.message
         for line in s.message.splitlines():
             log.info(line)
 
@@ -1774,6 +1832,10 @@ def main() -> None:
     for p in SAVED_FILES:
         log.info(f"  - {p}")
     log.info("=" * 60)
+    if args.status_file:
+        status = {"exit_code": code, "message": message, "run_name": RUN_NAME, "file_tag": FILE_TAG,
+                  "saved_files": [str(p) for p in SAVED_FILES]}
+        args.status_file.write_text(json.dumps(status, indent=2, ensure_ascii=False), encoding="utf-8")
     sys.exit(code)
 
 

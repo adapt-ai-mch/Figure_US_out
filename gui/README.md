@@ -1,8 +1,10 @@
-# Figure US out — GUI
+# FigureUS(out) — GUI
 
 The desktop front end for the model-eval skill. It shows what `../scripts/evaluate.py` produces; it never calculates a metric itself.
 
-**Status:** the start page is built. It has the image-stream hero, "Figure US out", and the four task buttons. Choosing a task shows which CSV columns it needs. The later steps (choose the CSV, set-up, check, confirm, results, report) exist only in the clickable mockup so far and are not wired to `evaluate.py` yet.
+**What it does:** the start page (image-stream hero, "FigureUS(out)", one liquid-glass button per task) opens each task's menu. From there: choose the predictions CSV (upload a file or a folder, or use a CSV in place by its path), match its columns, answer the set-up questions, check the CSV, confirm the cohort with Proceed / Retry, and read the results (metrics as evaluate.py reported them, a plot menu, notices, downloads, an editable title). Recent runs reopens earlier results.
+
+It runs on the user's own computer only: `../server/app.py` serves this app and runs `evaluate.py` at http://127.0.0.1:8765.
 
 ## Stack
 
@@ -12,27 +14,37 @@ Vite + React 19 + TypeScript, Tailwind CSS v4, shadcn (components in `src/compon
 |---|---|
 | `src/components/ui/image-stream-hero.tsx` | Image-stream hero, copied as supplied |
 | `src/components/ui/liquid-glass-button.tsx` | `LiquidButton` (used for the task buttons), plus `Button` and `MetalButton`, copied as supplied |
+| `src/components/ui/dorpdown-navigation.tsx` | `DropdownNavigation` (the task menus), adapted from the supplied file, name kept: fixed its props type so it compiles; a `<nav>` root instead of a full-screen `<main>`; click, keyboard, Escape and outside-click handling; optional `renderTrigger`, `onSelect`, `side`, `align`, `listClassName`; menus stay inside the hero and stack on phones. Its look and animations are unchanged; the header comment lists every change |
 | `src/components/ui/button.tsx` | shadcn's own button (from `shadcn init`; its `cn` import was corrected to `@/lib/utils`) |
-| `src/App.tsx` | The start page |
-| `src/index.css` | Tailwind, shadcn theme with the Figure US out palette, local fonts |
-| `public/hero/card_01.jpg` … `card_09.jpg` | Hero images: plots and ultrasound-style frames made by Figure US out from **synthetic data only** |
+| `src/App.tsx` | Picks the screen from the address: `#/`, `#/task/<task>`, `#/results/<run>`, `#/runs` |
+| `src/views/StartPage.tsx` | The start page |
+| `src/views/Workspace.tsx` | One task's three steps; `DataStep`, `SetupStep`, `CheckStep` and `workspace-model.ts` hold each part |
+| `src/views/ResultsView.tsx` | Results of one run, and the title editor |
+| `src/views/RecentRuns.tsx` | Finished evaluations on this computer |
+| `src/components/form.tsx`, `app-chrome.tsx` | Form controls, notes, progress; the header and page frame |
+| `src/lib/api.ts` | Client for the local server (`/api/...`) |
+| `src/lib/tasks.ts` | The four tasks, their columns, display names for metrics |
+| `src/lib/router.ts` | A small hash router |
+| `src/index.css` | Tailwind, shadcn theme with the FigureUS(out) palette, local fonts |
+| `public/hero/card_01.jpg` … `card_09.jpg` | Hero images: plots and ultrasound-style frames made by FigureUS(out) from **synthetic data only** |
 
-Why `src/components/ui`: shadcn installs every component there, and both supplied components import from `@/components/ui/...` and `@/lib/utils`. Keeping that folder means future `npx shadcn add …` components drop in without changing imports.
+Why `src/components/ui`: shadcn installs every component there, and the supplied components import from `@/components/ui/...` and `@/lib/utils`. Keeping that folder means future `npx shadcn add …` components drop in without changing imports.
 
 ## Run it
 
-Install once, while online (Node 20 or newer):
+People who only use the app need Python alone: `../start_figureus.command` (or `python server/app.py` from the skill folder) serves the built app in `dist/`, which is committed for that reason.
+
+To change the app, install once, while online (Node 20 or newer):
 
 ```bash
 npm install
 ```
 
-Then, offline:
+Then, offline, with the server running in another window (`python server/app.py --no-browser` from the skill folder):
 
 ```bash
-npm run dev       # development server on http://localhost:5173
-npm run build     # type-check and build to dist/
-npm run preview   # serve the built app
+npm run dev       # http://localhost:5173, sends /api to the server on 127.0.0.1:8765
+npm run build     # type-check and rebuild dist/ — commit dist/ with your change
 npm run lint
 ```
 
@@ -43,8 +55,15 @@ Everything the page needs is bundled: fonts come from `@fontsource` packages and
 - **Palette:** navy `#1E3A5F` = Internal Test, ochre `#A16207` = External Test (`--internal`, `--external` in `index.css`). Headings use Source Serif 4, everything else IBM Plex Sans.
 - **Liquid glass:** the distortion uses an SVG filter inside `backdrop-filter`, which only Chromium browsers support. Safari (and a WebKit-based Mac app shell) shows the button without the distortion. The task buttons add a light tint so their text stays readable either way.
 - **Reduced motion:** with "Reduce motion" turned on, the corridor freezes as a still picture.
+- **Task menus:** they open upward, because the hero clips anything below its bottom edge. Hover previews a menu; a click keeps it open until a second click, Escape or a click elsewhere.
 - **Lint warnings:** the four warnings from `npm run lint` are in the copied component files (`button.tsx`, `liquid-glass-button.tsx`), which are kept exactly as supplied.
 
-## Next
+## How it talks to evaluate.py
 
-Connecting the GUI to `evaluate.py` needs a way for the browser app to run a local Python process, for example a small desktop shell (Tauri or Electron) or a local-only Python server. That choice is still open.
+The app never calculates a metric. `src/lib/api.ts` calls the local server, which runs `../scripts/evaluate.py` and reads back what it saved:
+
+1. **Check:** `evaluate.py --validate-only --confirm gui` validates the CSV and saves the cohort counts with a cohort id. Problems come back by CSV line; a `NEEDS INPUT` message comes back with the field it is about, and the app asks that question beside the field.
+2. **Proceed:** `evaluate.py --confirm gui --confirmed-cohort <id>` runs the evaluation only if the file and the counts are still the ones confirmed.
+3. **Results:** the metrics sheet's `estimate_reported` and `ci_95_reported` text, the figures with their titles from the run record, notices, the report and every saved file.
+
+Every API call that changes something carries the header `x-figureus: 1`; the server refuses others, and answers only requests addressed to 127.0.0.1 or localhost.

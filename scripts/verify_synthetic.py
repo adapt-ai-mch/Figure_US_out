@@ -236,6 +236,48 @@ def verify_regression(data: Path, tmp: Path) -> None:
     code, text = run(out_t, "--task", "regression", "--csv", str(d / "tiny_known.csv"), "--unit", "days",
                      "--confirm", "yes", "--title", "x" * 81)
     check("title: longer than 80 characters is asked about, never cut (exit 2)", code == 2 and "--title" in text)
+
+    # --column: the GUI maps the CSV's own names; the file itself is never changed
+    renamed = pd.read_csv(d / "tiny_known.csv", dtype=str).rename(columns={"record_id": "fpath", "true": "TRUE"})
+    renamed.to_csv(tmp / "reg_renamed.csv", index=False)
+    before = (tmp / "reg_renamed.csv").read_bytes()
+    out_m = tmp / "reg_map"
+    code, text = run(out_m, "--task", "regression", "--csv", str(tmp / "reg_renamed.csv"), "--unit", "days",
+                     "--column", "record_id=fpath", "--column", "true=TRUE", "--confirm", "yes")
+    meta_m = json.loads(latest(out_m, "logs", "run_metadata").read_text())
+    check("columns: mapped names give the same MAE, the mapping is recorded and the CSV is untouched",
+          code == 0 and close(metric(out_m, "MAE"), 2.5) and meta_m["column_mapping"] == {"record_id": "fpath", "true": "TRUE"}
+          and (tmp / "reg_renamed.csv").read_bytes() == before, text[-400:])
+    code, text = run(out_m, "--task", "regression", "--csv", str(tmp / "reg_renamed.csv"), "--unit", "days",
+                     "--column", "record_id=nope", "--column", "true=TRUE", "--confirm", "yes")
+    check("columns: mapping from a missing column gives ERROR 404 (exit 4)",
+          code == 4 and "ERROR 404! This particular column (nope) is missing." in text)
+    both = pd.read_csv(d / "tiny_known.csv", dtype=str).assign(TRUE=lambda x: x["true"])
+    both.to_csv(tmp / "reg_both.csv", index=False)
+    code, text = run(out_m, "--task", "regression", "--csv", str(tmp / "reg_both.csv"), "--unit", "days",
+                     "--column", "true=TRUE", "--confirm", "yes")
+    check("columns: two candidate columns are asked about, not guessed (exit 2)", code == 2 and "NEEDS INPUT" in text)
+
+    # --validate-only, then --confirm gui with the cohort id the GUI showed
+    out_g = tmp / "reg_gui"
+    base_g = ["--task", "regression", "--csv", str(d / "tiny_known.csv"), "--unit", "days"]
+    code, text = run(out_g, *base_g, "--validate-only")
+    cohort = json.loads(latest(out_g, "logs", "cohort").read_text())
+    check("validate-only: saves the cohort counts, calculates nothing (exit 0, no metrics sheet)",
+          code == 0 and "VALIDATED" in text and cohort["total_participants"] == 4 and cohort["rows_in_csv"] == 4
+          and not list((out_g / "sheets").glob("metrics_*")), text[-400:])
+    code, text = run(out_g, *base_g, "--confirm", "gui", "--confirmed-cohort", cohort["cohort_id"])
+    check("gui confirm: the matching cohort id runs the evaluation", code == 0 and close(metric(out_g, "MAE"), 2.5), text[-400:])
+    code, text = run(out_g, *base_g, "--confirm", "gui", "--confirmed-cohort", "0000000000000000")
+    check("gui confirm: a different cohort id is sent back to Retry (exit 3)", code == 3 and "RETRY" in text)
+    code, text = run(out_g, *base_g, "--confirm", "gui")
+    check("gui confirm: no cohort id is an error (exit 1)", code == 1 and "--confirmed-cohort" in text)
+    status_file = tmp / "status.json"
+    code, text = run(out_g, *base_g, "--validate-only", "--status-file", str(status_file))
+    status = json.loads(status_file.read_text()) if status_file.exists() else {}
+    check("status file: exit code, closing message and file tag saved for the local server",
+          status.get("exit_code") == 0 and status.get("message", "").startswith("VALIDATED")
+          and status.get("file_tag", "").startswith("internal_"), str(status)[:300])
     for f in ("calibration_plot", "bland_altman", "true_vs_pred"):
         check(f"regression: figure {f}.png saved", latest(out, "figures", f).exists())
     meta = json.loads(latest(out, "logs", "run_metadata").read_text())

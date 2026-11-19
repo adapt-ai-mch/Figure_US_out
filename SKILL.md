@@ -15,6 +15,7 @@ You guide the conversation. `scripts/evaluate.py` does every calculation. Never 
 4. **Offline.** After installation nothing needs the network. Do not fetch anything during a run.
 5. **Report `NA` as `NA`.** Give the reason from the `note` column. Do not substitute a value.
 6. **Do not pass `--confirm yes` on real data.** It skips the pop-up and exists for the synthetic self-test.
+7. **The GUI options are for the FigureUS(out) server only.** `--validate-only`, `--confirm gui`, `--confirmed-cohort` and `--status-file` let the local app (`server/app.py`) show the cohort with Proceed / Retry in its own window. Do not use them in the chat workflow, where the pop-up is the confirmation.
 
 ## Workflow
 
@@ -45,6 +46,8 @@ ERROR 404! This particular column (pred_prob) is missing.
 ```
 
 Stop there (exit code 4) until the user supplies a corrected CSV. Identifiers are read as text, so `001` stays `001`. Relative file paths are resolved from the CSV's folder.
+
+When the data are in the CSV under other names (for example `fpath` for `record_id`, `TRUE` for `true`), do not edit or copy the file: ask the user which column holds each name, then pass one `--column NAME=CSV_COLUMN` per name, for example `--column record_id=fpath --column true=TRUE --column pred=PRED`. The CSV is not changed, its checksum in the run record stays the original file's, and the mapping is saved as `column_mapping`. A mapped column that does not exist gives the `ERROR 404!` line; a CSV that has both the expected name and the mapped column stops with `NEEDS INPUT` (ask which one to use). `--participant-col` takes the CSV's own column name.
 
 ### Step 3 — Task questions
 First, for every task, ask: **Is this CSV the internal test set or the external test set?** → `--test-set internal` or `--test-set external`. The script stops with `NEEDS INPUT` (exit 2) until this is given. The answer goes into every output file name (`metrics_internal_<run>.csv`, `bland_altman_external_<run>.png`, …) and starts every plot title (`Internal Test: Bland-Altman Plot`, `External Test: Confusion Matrix (participants)`, …).
@@ -87,6 +90,10 @@ Read `reports/summary_<test set>_<run>.md` and `sheets/metrics_<test set>_<run>.
 | `reports/` | `summary_*.md` |
 
 Every file name is `<name>_<internal|external>_<run timestamp>.<ext>`, so the test set is visible in the name and earlier runs are never overwritten. Every plot title starts with `Internal Test:` or `External Test:`; detection overlay videos carry the same label on each frame. The run record lists each figure's title under `figure_titles`.
+
+## FigureUS(out), the local app
+
+`server/app.py` serves the FigureUS(out) GUI at `http://127.0.0.1:8765` on this computer only (start it with `./start_figureus.command` or `python server/app.py`). The person chooses the task, the CSV (an upload, a folder for masks and XML files, or a path used in place), matches the columns, and answers the same questions as above. The server only runs `scripts/evaluate.py`: a check with `--validate-only`, then, after **Proceed** in the app, the evaluation with `--confirm gui --confirmed-cohort <id>` (the id ties the confirmation to that file and those counts). Every value the app shows is read from the files evaluate.py saved. Uploads and results go to `eval_output/gui_jobs/`, which is never committed. `python scripts/verify_server.py` checks the server on synthetic data.
 
 ## Reproducibility
 

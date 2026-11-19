@@ -2,6 +2,8 @@
 
 Works on Apple-silicon and Intel MacBooks with 16 GB RAM. CPU only. The internet is needed once, for step 2.
 
+Two ways to use it: the **FigureUS(out) app** in your browser (section 7; `./start_figureus.command` does steps 1–2 for you on first start), or the **command line** (sections 4–6). Both run the same `scripts/evaluate.py`, on this computer only.
+
 ## 1. Check Python
 
 Open **Terminal** and run:
@@ -36,7 +38,7 @@ source .venv/bin/activate
 python scripts/verify_synthetic.py
 ```
 
-This builds a small synthetic dataset in a temporary folder, runs all four tasks and checks about 100 known answers, including the internal/external labels on file names and plot titles, the weeks-to-days conversion, the 2-decimal `[lower - upper]` reporting format, ROC and precision-recall curves whose areas match AUROC and AUPRC, and segmentation overlays on the original image. The last line should read `N of N checks passed` with the two numbers equal (one cross-check is skipped unless scikit-learn happens to be installed; it is not required). To keep a copy of the synthetic data to look at: `python scripts/make_synthetic_data.py --out synthetic_data`.
+This builds a small synthetic dataset in a temporary folder, runs all four tasks and checks over 100 known answers, including the internal/external labels on file names and plot titles, the weeks-to-days conversion, the 2-decimal `[lower - upper]` reporting format, ROC and precision-recall curves whose areas match AUROC and AUPRC, and segmentation overlays on the original image. The last line should read `N of N checks passed` with the two numbers equal (one cross-check is skipped unless scikit-learn happens to be installed; it is not required). To keep a copy of the synthetic data to look at: `python scripts/make_synthetic_data.py --out synthetic_data`.
 
 ## 4. Run
 
@@ -85,6 +87,29 @@ Inside the output folder: `sheets/` (CSV), `figures/` (PNG), `videos/` (MP4 over
 
 The report and console show every estimate to 2 decimal places (counts as whole numbers) with its 95% CI as `[lower - upper]`, for example `3.80 [3.54 - 4.06]`. The metrics CSV keeps the full-precision numbers as well, in `estimate`, `ci_lower` and `ci_upper`.
 
+## 7. The FigureUS(out) app
+
+Double-click **`start_figureus.command`** in Finder (the first time, macOS may ask you to confirm: right-click it, choose **Open**). Or, in Terminal:
+
+```bash
+cd /path/to/model-eval
+./start_figureus.command          # or: source .venv/bin/activate && python server/app.py
+```
+
+The browser opens **http://127.0.0.1:8765**. Keep the Terminal window open while you work; press Control-C there to stop. The address works on this computer only: the server listens on 127.0.0.1, answers only requests addressed to this computer, and refuses changes that do not come from its own page.
+
+1. Choose a task, then the predictions CSV. For segmentation and detection, choose the **folder** that holds the CSV and its masks or XML files, so relative paths keep working. Or paste the CSV's full path (Finder: select it, Option-Command-C) to use it where it is, without a copy.
+2. Match the columns: if your CSV says `fpath`, `TRUE`, `PRED`, pick them for `record_id`, `true`, `pred`. The CSV is not changed.
+3. Answer the set-up questions (test set, unit, labels, threshold range…), then **Check the CSV**. Problems are listed by CSV line; questions evaluate.py asks appear next to their field.
+4. Confirm the cohort (**Total participants: N**) with **Proceed**, or **Retry**.
+5. Results: metrics with 95% CIs as reported by evaluate.py, a plot menu, notices, and downloads (zip, report, metrics). Edit the title on the results page; saving re-runs with the same seed, so the numbers do not change. **Recent runs** reopens earlier results.
+
+Uploaded copies and every result are kept in `eval_output/gui_jobs/` on this computer. That folder is never committed to git; delete it when the files are no longer needed.
+
+Check the app's server with `python scripts/verify_server.py` (synthetic data only; the last line should read `17 of 17 server checks passed`).
+
+The built app is in `gui/dist`, so only Python is needed to run it. To change the app itself you also need Node 20 or newer: see `gui/README.md`.
+
 ## Using it with the agent
 
 Give the agent this folder as a skill (it reads `SKILL.md`, then the guide for your task). It asks the questions, runs the commands above for you, and explains the results. All numbers come from `scripts/evaluate.py`.
@@ -98,7 +123,9 @@ Masks and XML files are read one pair at a time and videos are streamed frame by
 | Symptom | What to do |
 |---|---|
 | `ModuleNotFoundError` | The environment is not active: `source .venv/bin/activate` |
-| `ERROR 404! This particular column (...) is missing.` | Rename or add the column in the CSV; names are exact and lower-case |
+| `ERROR 404! This particular column (...) is missing.` | Add the column, or map a differently named one with `--column record_id=fpath` (in the app: match the columns); names are exact and lower-case |
+| The app says the server is not running | Start it again with `./start_figureus.command`, then reload the page |
+| `address already in use` when starting the app | FigureUS(out) is already running: open http://127.0.0.1:8765. Or start another on a different port: `python server/app.py --port 8766` |
 | Exit code 5, "Evaluation stopped" | Open `sheets/validation_issues_*.csv`; fix the rows, or agree to exclude them with `--exclude-invalid` |
 | Overlay boxes are one frame early or late | Your export counts frames from 1: add `--frame-offset -1` |
 | Overlay video will not open in QuickTime | Try another player you already have (for example VLC). The metrics are unaffected |
