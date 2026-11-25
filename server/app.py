@@ -225,6 +225,7 @@ class Options(BaseModel):
     title: str | None = Field(default=None, max_length=400)
     columns: dict[str, str] = {}                 # name evaluate.py expects -> CSV column
     participant_col: str | None = None
+    image_col: str | None = None                 # column whose distinct values are the total images
     id_format: Literal["plain", "visit"] = "plain"
     mode: Literal["standard", "fgr"] | None = None
     positive_label: str | None = None
@@ -254,7 +255,7 @@ def build_command(job: dict, o: Options, kind: str, cohort_id: str | None, out: 
         if col and name != col:
             cmd += ["--column", f"{name}={col}"]
     pairs = {"--test-set": o.test_set, "--title": (o.title or "").strip() or None, "--mode": o.mode,
-             "--participant-col": o.participant_col, "--positive-label": o.positive_label,
+             "--participant-col": o.participant_col, "--image-col": o.image_col, "--positive-label": o.positive_label,
              "--negative-label": o.negative_label, "--unit": (o.unit or "").strip() or None,
              "--repeated-measures": o.repeated_measures, "--empty-both": o.empty_both}
     for flag, value in pairs.items():
@@ -405,7 +406,7 @@ def results(out: Path, tag: str) -> dict:
     report = one(out, f"reports/summary_{tag}.md")
     keep_meta = ["run_name", "test_set", "title", "task", "mode", "units", "n_participants", "n_observations",
                  "observation_unit", "n_rows_csv", "n_rows_excluded", "random_seed", "n_boot", "ci_method",
-                 "cohort_id", "column_mapping", "participant_link"]
+                 "cohort_id", "column_mapping", "participant_link", "n_images", "image_column"]
     return {
         "meta": {k: meta.get(k) for k in keep_meta},
         "metrics": sheet_records(metrics, ["group", "metric", "estimate_reported", "ci_95_reported", "unit",

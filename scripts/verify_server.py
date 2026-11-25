@@ -140,6 +140,10 @@ def main() -> None:
                   any(f["title"] == "Internal Test: Bland-Altman Plot" for f in res.get("figures", [])))
             check("column mapping is in the run record",
                   res.get("meta", {}).get("column_mapping") == {"record_id": "ID", "true": "TRUE", "pred": "PRED"})
+            iv = c.run(job["job_id"], "check", {**options, "image_col": "ID"})
+            ic = iv.get("cohort") or {}
+            check("the chosen image column reaches evaluate.py; the cohort has Total images under the CSV's own name",
+                  iv["status"] == "ok" and ic.get("total_images") == 4 and ic.get("image_column") == "ID", str(iv)[:300])
 
             rid = view["run_id"]
             code, _ = c.request("GET", f"/api/runs/{rid}/files/{res['report_file']}")

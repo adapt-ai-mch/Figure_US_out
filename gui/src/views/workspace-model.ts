@@ -18,6 +18,8 @@ export type Slot = {
   summary: CsvSummary | null
   mapping: Record<string, string>
   participant: string
+  /** CSV column whose distinct values are the total images; "" = not counted. */
+  images: string
   exclude_invalid: boolean
   error: string | null
 }
@@ -28,6 +30,7 @@ export const emptySlot = (): Slot => ({
   summary: null,
   mapping: {},
   participant: "",
+  images: "",
   exclude_invalid: false,
   error: null,
 })
@@ -85,6 +88,12 @@ export function participantFrom(other: Slot, summary: CsvSummary): string {
   return p && summary.columns.includes(p) ? p : ""
 }
 
+/** The column this CSV counts images from: its own earlier choice, else the other test set's, when this CSV has it. */
+export function imagesFor(slot: Slot, other: Slot | null, summary: CsvSummary): string {
+  if (slot.images && summary.columns.includes(slot.images)) return slot.images
+  return other?.images && summary.columns.includes(other.images) ? other.images : ""
+}
+
 const num = (v: string) => (v.trim() === "" ? null : Number(v))
 
 export function toOptions(task: TaskKey, testSet: TestSetKey, slot: Slot, s: Setup): Options | null {
@@ -98,6 +107,7 @@ export function toOptions(task: TaskKey, testSet: TestSetKey, slot: Slot, s: Set
     title: s.title.trim() || null,
     columns: Object.fromEntries(Object.entries(slot.mapping).filter(([, col]) => col)),
     participant_col: !classification && p && p !== RECORD && p !== VISIT ? p : null,
+    image_col: slot.images || null,
     id_format: !classification && p === VISIT ? "visit" : "plain",
     mode: classification ? s.mode : null,
     positive_label: classification ? s.positive_label || null : null,

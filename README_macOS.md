@@ -72,6 +72,8 @@ python scripts/evaluate.py --task segmentation --test-set external --csv ~/data/
 
 - `--test-set internal` or `--test-set external` is required for every evaluation. It goes into every output file name and starts every plot title (`Internal Test: Bland-Altman Plot`).
 - `--title "GAUGE: After Pooling"` (optional, up to 80 characters) heads the summary report and is saved in the run record. Leave out participant identifiers.
+- `--participant-col <column>` names the column that identifies participants, for example `enrid` or `record_id`. Total participants is its number of distinct values (`df['enrid'].nunique()`), so one participant can have several rows. When that column is `record_id` itself, repeated `record_id` values are allowed.
+- `--image-col <column>` (optional) names the column that gives the total number of images, for example a file-name column. Total images is its number of distinct non-empty values; blank cells and rows that share a value are reported as notices.
 - Leave out `--csv` to choose the file in a Finder dialog.
 - Add `--inspect` to check the columns and see counts without evaluating.
 - Add `--out-dir <folder>` to choose where results go (default `eval_output/` in the current folder).
@@ -100,9 +102,9 @@ cd /path/to/model-eval
 The browser opens **http://127.0.0.1:8765**. Keep the Terminal window open while you work; press Control-C there to stop. The address works on this computer only: the server listens on 127.0.0.1, answers only requests addressed to this computer, and refuses changes that do not come from its own page.
 
 1. The start page shows FigureUS(out), then its tagline, then the four tasks; hover a task to fan out the plots it makes. Click a task: its CSV page slides up over the start page (going back slides it away again). It opens with two places: **Internal test set** and **External test set**. Add one or both. For segmentation and detection, choose the **folder** that holds the CSV and its masks or XML files, so relative paths keep working. Or paste the CSV's full path (Finder: select it, Option-Command-C) to use it where it is, without a copy.
-2. Match the columns: if your CSV says `fpath`, `TRUE`, `PRED`, pick them for `record_id`, `true`, `pred`. The CSV is not changed. When the second CSV has the same column names, it is matched like the first; check it before going on.
+2. Match the columns: if your CSV says `fpath`, `TRUE`, `PRED`, pick them for `record_id`, `true`, `pred`. The CSV is not changed. Then choose how rows link to participants (for example `enrid` or `record_id`; Total participants = its number of distinct values) and, if you want it counted, the column that gives the total number of images (Total images = its number of distinct values). When the second CSV has the same column names, it is matched like the first; check it before going on.
 3. Answer the set-up questions (unit, labels, threshold range…); they apply to both test sets. Then **Check both CSVs** (or **Check the CSV**). Problems are listed by CSV line for each test set; questions evaluate.py asks appear next to their field.
-4. Confirm the cohorts (**Total participants: N** for each test set) with **Proceed**, or **Retry**. Proceed evaluates the internal test set, then the external.
+4. Confirm the cohorts (**Total participants: N** for each test set, and **Total images: N** when you chose an image column) with **Proceed**, or **Retry**. Proceed evaluates the internal test set, then the external.
 5. Results, internal and external side by side: metrics with 95% CIs as reported by evaluate.py (one column pair per test set), a plot menu that shows the chosen plot for each test set, notices, and downloads (zip, report, metrics) per test set. Edit the title on the results page; saving re-runs with the same seed, so the numbers do not change. **Recent runs** reopens earlier results; a pair evaluated together opens together.
 6. Plots: click a plot to see it large over the blurred page (Esc, the × or a click outside it closes it; with both test sets, ← → switch between them). Under each plot, **TIFF** and **JPEG** save it at 600 dpi and **SVG** as a vector drawing; **PNG** is the screen-size copy. In Chrome or Edge the Mac's Save dialog opens, so you choose the folder and the name. Safari and Firefox save into their download folder unless you turn on asking where to save (Safari: Settings → General → File download location → Ask for each download; Firefox: Settings → Files and Applications → Always ask you where to save files). Runs made before this feature have only the PNG; edit the title or evaluate again to get the other formats.
 
@@ -110,7 +112,7 @@ The round buttons at the top right choose the theme: **Device** (follows the Mac
 
 Uploaded copies and every result are kept in `eval_output/gui_jobs/` on this computer. That folder is never committed to git; delete it when the files are no longer needed.
 
-Check the app's server with `python scripts/verify_server.py` (synthetic data only; the last line should read `19 of 19 server checks passed`).
+Check the app's server with `python scripts/verify_server.py` (synthetic data only; the last line should read `20 of 20 server checks passed`).
 
 The built app is in `gui/dist`, so only Python is needed to run it. To change the app itself you also need Node 20 or newer: see `gui/README.md`.
 

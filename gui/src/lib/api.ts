@@ -25,6 +25,8 @@ export type Options = {
   title: string | null
   columns: Record<string, string>
   participant_col: string | null
+  /** Column whose distinct non-empty values evaluate.py counts as the total images. */
+  image_col: string | null
   id_format: "plain" | "visit"
   mode: "standard" | "fgr" | null
   positive_label: string | null
@@ -41,6 +43,9 @@ export type Options = {
 
 export type Cohort = {
   total_participants: number
+  /** Absent in cohorts saved before the image count existed. */
+  total_images?: number | null
+  image_column?: string | null
   observations: number
   observation_unit: string
   rows_in_csv: number
@@ -83,6 +88,8 @@ export type Results = {
     cohort_id: string
     column_mapping: Record<string, string> | null
     participant_link: string
+    n_images?: number | null
+    image_column?: string | null
   }
   metrics: MetricRow[]
   figures: Figure[]

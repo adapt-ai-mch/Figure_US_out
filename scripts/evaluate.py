@@ -264,13 +264,13 @@ def add_issue(issues: list[dict], line: int, column: str, issue: str, detail: st
     issues.append({"csv_line": int(line), "column": column, "issue": issue, "detail": detail})
 
 
-def validate_record_ids(df: pd.DataFrame, issues: list[dict]) -> None:
-    """record_id must be present and unique on every row."""
+def validate_record_ids(df: pd.DataFrame, issues: list[dict], repeats_allowed: bool = False) -> None:
+    """record_id must be present on every row, and unique unless it names the participant (several rows each)."""
     counts = df["record_id"].value_counts()
     for line, rid in zip(df["csv_line"], df["record_id"]):
         if rid == "":
             add_issue(issues, line, "record_id", "empty identifier")
-        elif counts[rid] > 1:
+        elif counts[rid] > 1 and not repeats_allowed:
             add_issue(issues, line, "record_id", "duplicate identifier",
                       f"this identifier appears on {counts[rid]} rows")
 
@@ -1554,7 +1554,10 @@ def parse_args() -> argparse.Namespace:
                                     "(e.g. 'GAUGE: After Pooling'); heads the report and is saved in the run record")
     ap.add_argument("--unit", help="common unit of true and pred (regression); weeks are converted to days "
                                    "for every metric")
-    ap.add_argument("--participant-col", help="CSV column that links rows to participants")
+    ap.add_argument("--participant-col", help="CSV column that links rows to participants (e.g. enrid or record_id); "
+                                              "total participants = its number of distinct values")
+    ap.add_argument("--image-col", help="CSV column whose number of distinct non-empty values is reported as the "
+                                        "total number of images (files), e.g. a file-name column")
     ap.add_argument("--id-format", choices=["plain", "visit"], default="plain",
                     help="'visit' parses participant from record_id like 001_32+5")
     ap.add_argument("--repeated-measures", choices=["participant-mean", "all-pairs-anova"],
@@ -1632,7 +1635,10 @@ def write_report(meta: dict, metrics: pd.DataFrame, notices: list[str]) -> None:
     top = [f"# {head}{meta['title']}", "", summary, ""] if meta.get("title") else [f"# {head}{summary}", ""]
     lines = top + [f"- Test set: **{meta['test_set']}**",
              f"- Run: `{RUN_NAME}` | seed {meta['random_seed']} | bootstrap replicates {meta['n_boot']}",
-             f"- **Total participants: {meta['n_participants']}**",
+             f"- **Total participants: {meta['n_participants']}**" + (
+                 "" if meta["participant_link"] == "visit identifier" else f" (distinct values of {meta['participant_link']})"),
+             *([f"- **Total images: {meta['n_images']}** (distinct values of {meta['image_column']})"]
+               if meta.get("n_images") is not None else []),
              f"- {meta['observation_unit'].capitalize()} scored: {meta['n_observations']}",
              f"- Rows in CSV: {meta['n_rows_csv']} | rows excluded after validation: {meta['n_rows_excluded']}",
              f"- Units: {meta['units']}", "", "## Metrics", "",
@@ -1659,11 +1665,15 @@ def run_once(args, csv_path: Path) -> None:
     step(1, total, f"Reading CSV: {csv_path.name}")
     df = read_csv_strict(csv_path)
     column_mapping = apply_column_mapping(df, args.column)
-    if args.participant_col in column_mapping.values():  # the participant column may have been renamed
-        args.participant_col = next(t for t, s in column_mapping.items() if s == args.participant_col)
+    for attr in ("participant_col", "image_col"):  # these may name a column that was renamed
+        col = getattr(args, attr)
+        if col in column_mapping.values():
+            setattr(args, attr, next(t for t, s in column_mapping.items() if s == col))
     missing = check_columns(df, task)
     if missing:
         raise Stop(EXIT_MISSING_COLUMN, "\n".join(MISSING_COLUMN_MSG.format(col=c) for c in missing))
+    if args.image_col and args.image_col not in df.columns:
+        raise Stop(EXIT_MISSING_COLUMN, MISSING_COLUMN_MSG.format(col=args.image_col))
     log.info(f"Loaded {len(df)} rows x {df.shape[1] - 1} columns (identifiers kept as text)")
     if args.inspect:
         inspect_csv(df, task)
@@ -1672,7 +1682,9 @@ def run_once(args, csv_path: Path) -> None:
         raise Stop(EXIT_INVALID, "The CSV has a header but no data rows.")
 
     step(2, total, "Validating identifiers, values and files")
-    validate_record_ids(df, issues)
+    # record_id may repeat only when the user chose it as the participant column (several images per participant)
+    validate_record_ids(df, issues, repeats_allowed=task != "classification" and args.id_format != "visit"
+                        and args.participant_col == "record_id")
     participants = derive_participants(df, args, task, issues)
     mapping, parsed = {}, {}
     if task == "classification":
@@ -1712,7 +1724,18 @@ def run_once(args, csv_path: Path) -> None:
     if len(dfv) == 0:
         raise Stop(EXIT_INVALID, "No valid rows remain.")
     codes = pd.factorize(participants[valid].reset_index(drop=True))[0]
-    n_p, n_obs = int(codes.max()) + 1, len(dfv)
+    n_p, n_obs = int(codes.max()) + 1, len(dfv)  # n_p = distinct values of the participant link
+    n_images, image_shown = None, column_mapping.get(args.image_col, args.image_col)  # the CSV's own column name
+    if args.image_col:  # total images = distinct non-empty values of the column the user chose
+        files = dfv[args.image_col]
+        named = files[files != ""]
+        n_images = int(named.nunique())
+        if len(named) < len(files):
+            notices.append(f"{len(files) - len(named)} rows have no value in {image_shown}; "
+                           "they are not counted in Total images.")
+        if n_images < len(named):
+            notices.append(f"{image_shown} has {n_images} distinct values on {len(named)} rows; "
+                           "rows that share a value count as one image.")
 
     if task == "regression" and n_obs > n_p and not args.repeated_measures:
         raise Stop(EXIT_NEEDS_INPUT,
@@ -1731,20 +1754,29 @@ def run_once(args, csv_path: Path) -> None:
     step(3, total, "Cohort confirmation")
     unit = "participants" if (task == "classification" and args.mode == "standard") else OBS_UNIT[task]
     headline = f"Total participants: {n_p}"
+    images_line = f"Total images: {n_images} (distinct values of {image_shown})" if n_images is not None else None
     body = [f"{unit.capitalize()}: {n_obs}"] if n_obs != n_p else []  # shown only when it differs
     body.append(f"Rows in CSV: {len(df)}")
     if bad_lines:
         body.append(f"Rows excluded after validation: {len(bad_lines)}")
     log.info(f"**{headline}**")
+    if images_line:
+        log.info(f"**{images_line}**")
     for b in body:
         log.info(b)
+    if images_line:
+        body.insert(0, images_line)
     for n in notices:
         log.info(f"NOTICE: {n}")
     csv_sha = sha256_file(csv_path)
     # Ties a GUI confirmation to this exact file and these exact counts.
-    cohort_id = hashlib.sha256(f"{csv_sha}|{n_p}|{n_obs}|{len(df)}|{len(bad_lines)}".encode()).hexdigest()[:16]
+    key = f"{csv_sha}|{n_p}|{n_obs}|{len(df)}|{len(bad_lines)}"
+    if n_images is not None:  # only then, so cohorts confirmed without an image column keep their id
+        key += f"|images:{args.image_col}:{n_images}"
+    cohort_id = hashlib.sha256(key.encode()).hexdigest()[:16]
     if args.validate_only:
-        cohort = {"total_participants": n_p, "observations": n_obs, "observation_unit": unit, "rows_in_csv": len(df),
+        cohort = {"total_participants": n_p, "total_images": n_images, "image_column": image_shown,
+                  "observations": n_obs, "observation_unit": unit, "rows_in_csv": len(df),
                   "rows_excluded": len(bad_lines), "excluded_csv_lines": bad_lines, "notices": notices,
                   "column_mapping": column_mapping, "cohort_id": cohort_id}
         path = saved(DIRS["logs"] / f"cohort_{FILE_TAG}.json")
@@ -1766,9 +1798,10 @@ def run_once(args, csv_path: Path) -> None:
             "column_mapping": column_mapping or None, "cohort_id": cohort_id,
             "csv_file": str(csv_path), "csv_sha256": csv_sha, "n_rows_csv": len(df),
             "n_rows_excluded": len(bad_lines), "excluded_csv_lines": bad_lines, "n_participants": n_p,
+            "n_images": n_images, "image_column": image_shown,
             "n_observations": n_obs, "observation_unit": unit,
             "participant_link": ("visit identifier" if (task == "classification" and args.mode == "fgr") or args.id_format == "visit"
-                                 else args.participant_col or "record_id"),
+                                 else column_mapping.get(args.participant_col, args.participant_col) or "record_id"),
             "label_mapping": mapping or None, "thresholds": {},
             "units": args.unit if task == "regression" else {"classification": "proportion / count",
                                                              "detection": "boxes / proportion; coordinates in pixels",

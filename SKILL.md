@@ -54,13 +54,13 @@ First, for every task, ask: **Is this CSV the internal test set or the external 
 
 If the user gives a title for these results (for example `GAUGE: After Pooling`), pass `--title "<title>"`. It heads the summary report as `# Internal Test: GAUGE: After Pooling`, with the task line below it, and is saved as `title` in the run record. It is optional: never invent one. At most 80 characters (a longer one stops with `NEEDS INPUT`), and it must not contain participant identifiers.
 
-Then ask the questions listed in the task guide and turn each answer into its option. For detection and segmentation, ask whether rows identify people or files, and which column links rows to participants.
+Then ask the questions listed in the task guide and turn each answer into its option. For detection and segmentation, ask whether rows identify people or files, and which column links rows to participants (for example `enrid` or `record_id`; total participants = that column's number of distinct values; when it is `record_id` itself, repeated `record_id` values are allowed). For every task, ask which column, if any, gives the total number of images and pass `--image-col <column>` (total images = its number of distinct non-empty values); never choose it for the user.
 
 ### Step 4 — Validation
 Run the evaluation command from the guide. The script reports invalid values, duplicate `record_id`s and unreadable files by CSV line, saves them to `sheets/validation_issues_<test set>_<run>.csv`, and stops with exit code 5. Summarise the problem types and counts for the user and ask how to proceed (fix the CSV, or exclude exactly those rows).
 
 ### Step 5 — Cohort confirmation
-Before any metric is calculated the script prints `**Total participants: N**` and, when it differs, the number of visits, videos or mask pairs. Show that line in bold in the chat. The script then opens a local pop-up with the same counts and **Proceed** / **Retry** buttons.
+Before any metric is calculated the script prints `**Total participants: N**`, `**Total images: N (distinct values of <column>)**` when `--image-col` was given, and, when it differs, the number of visits, videos or mask pairs. Show that line in bold in the chat. The script then opens a local pop-up with the same counts and **Proceed** / **Retry** buttons.
 
 - **Proceed** starts the evaluation.
 - **Retry** ends the run with exit code 3: go back to Step 2 and ask for the CSV again. (When the CSV came from the file chooser, the chooser reopens by itself.)

@@ -156,7 +156,19 @@ function CheckResult({
           </span>
         </div>
         <div className="flex flex-col gap-4 px-5 py-5">
-          <p className="font-heading text-3xl font-bold tracking-[-0.01em]">Total participants: {k.total_participants}</p>
+          <div className="flex flex-col gap-1">
+            <p className="font-heading text-3xl font-bold tracking-[-0.01em]">Total participants: {k.total_participants}</p>
+            {k.total_images != null && (
+              <p className="font-heading text-2xl font-bold tracking-[-0.01em]">
+                Total images: {k.total_images}
+                {k.image_column && (
+                  <span className="ml-2 font-sans text-sm font-normal text-muted-foreground [overflow-wrap:anywhere]">
+                    distinct values of {k.image_column}
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
           <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1.5 text-[15px]">
             {rows.map(([label, value]) => (
               <div key={label} className="contents">

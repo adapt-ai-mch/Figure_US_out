@@ -335,6 +335,35 @@ def verify_regression(data: Path, tmp: Path) -> None:
         code, text = run(out, "--task", "regression", "--csv", str(d / "repeated.csv"), "--unit", "days",
                          "--id-format", "visit", "--repeated-measures", method, "--confirm", "yes")
         check(f"repeated measures: {method} runs with 40 participants", code == 0 and "**Total participants: 40**" in text)
+
+    # Participants = distinct values of the chosen column (record_id may then repeat); images = a chosen column
+    pd.DataFrame({"record_id": ["P1", "P1", "P2", "P2", "P3", "P4"],
+                  "file": ["a.png", "b.png", "c.png", "c.png", "", "e.png"],
+                  "true": [30, 31, 28, 28.5, 33, 35], "pred": [31, 30.5, 29, 28, 32, 34]}
+                 ).to_csv(tmp / "reg_images.csv", index=False)
+    out_i = tmp / "reg_images"
+    base_i = ["--task", "regression", "--csv", str(tmp / "reg_images.csv"), "--unit", "days",
+              "--repeated-measures", "participant-mean"]
+    code, text = run(out_i, *base_i, "--confirm", "yes")
+    check("participants: a repeated record_id is a duplicate unless it is the participant column (exit 5)",
+          code == 5 and "duplicate identifier" in text)
+    code, text = run(out_i, *base_i, "--participant-col", "record_id", "--image-col", "file", "--validate-only")
+    coh = json.loads(latest(out_i, "logs", "cohort").read_text())
+    check("participants: record_id as participant column gives its distinct values (4); "
+          "images: distinct non-empty values of the chosen column (4)",
+          code == 0 and coh["total_participants"] == 4 and coh["total_images"] == 4 and coh["image_column"] == "file"
+          and "**Total images: 4 (distinct values of file)**" in text, text[-400:])
+    check("images: blank and shared values are reported as notices, by count only",
+          any("1 rows have no value in file" in n for n in coh["notices"])
+          and any("4 distinct values on 5 rows" in n for n in coh["notices"]), str(coh["notices"]))
+    code, text = run(out_i, *base_i, "--participant-col", "record_id", "--image-col", "file",
+                     "--confirm", "gui", "--confirmed-cohort", coh["cohort_id"])
+    meta_i = json.loads(latest(out_i, "logs", "run_metadata").read_text())
+    check("images: the confirmed count is saved in the run record and the report",
+          code == 0 and meta_i["n_images"] == 4 and meta_i["image_column"] == "file"
+          and "**Total images: 4**" in latest(out_i, "reports", "summary").read_text(), text[-400:])
+    code, text = run(out_i, *base_i, "--participant-col", "record_id", "--image-col", "nope", "--confirm", "yes")
+    check("images: a missing image column gives ERROR 404 (exit 4)", code == 4 and "(nope) is missing" in text)
     # ANOVA limits collapse to the ordinary limits when every participant has one... and widen vs participant means
     dd = np.array([1.0, 3.0, -2.0, 0.0, 4.0, 6.0])
     cl = np.array([0, 0, 1, 1, 2, 2])

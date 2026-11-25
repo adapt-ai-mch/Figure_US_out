@@ -18,6 +18,8 @@ type Props = {
   summary: CsvSummary | null
   mapping: Record<string, string>
   participant: string
+  /** Column counted for the total images ("" = none). */
+  images: string
   problems: Problems
   /** evaluate.py's message when it stopped on the columns (missing column, or a choice about them). */
   columnMessage: string | null
@@ -26,6 +28,7 @@ type Props = {
   onReset: () => void
   onMapping: (name: string, column: string) => void
   onParticipant: (value: string) => void
+  onImages: (value: string) => void
 }
 
 const folderProps = { webkitdirectory: "", directory: "" } as object
@@ -260,14 +263,15 @@ export function DataStep(p: Props) {
                   <option value="" disabled>
                     Choose
                   </option>
-                  <option value={RECORD}>Each record_id is one participant</option>
+                  <option value={RECORD}>Each record_id is one participant (one row each)</option>
                   <option value={VISIT}>record_id holds visits like 001_32+5 (participant 001)</option>
-                  <optgroup label="Or a column that names the participant">
+                  <optgroup label="Or a column that names the participant (e.g. enrid); several rows each allowed">
                     {p.summary.columns
-                      .filter((col) => !mappedCols.has(col) || col === p.participant)
+                      .filter((col) => !mappedCols.has(col) || col === p.mapping.record_id || col === p.participant)
                       .map((col) => (
                         <option key={col} value={col}>
                           {col}
+                          {col === p.mapping.record_id && col !== "record_id" ? " (record_id)" : ""}
                         </option>
                       ))}
                   </optgroup>
@@ -275,6 +279,23 @@ export function DataStep(p: Props) {
               </div>
             </Field>
           )}
+
+          <Field
+            htmlFor={`${p.idPrefix}-images`}
+            label="Which column gives the total number of images? (optional)"
+            help="Total images is the number of different values in this column, for example a file-name column. Rows with the same value count as one image. Choose None to leave the count out."
+          >
+            <div id={`${p.idPrefix}-field-image_col`}>
+              <Select id={`${p.idPrefix}-images`} value={p.images} onChange={(e) => p.onImages(e.target.value)}>
+                <option value="">None</option>
+                {p.summary.columns.map((col) => (
+                  <option key={col} value={col}>
+                    {col}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </Field>
         </>
       )}
     </div>

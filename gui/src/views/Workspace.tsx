@@ -16,6 +16,7 @@ import {
   emptySetup,
   emptySlot,
   needsInputText,
+  imagesFor,
   participantFrom,
   setupProblems,
   slotProblems,
@@ -136,9 +137,10 @@ export function Workspace({ taskKey, mode }: { taskKey: TaskKey; mode: Setup["mo
         const fromOther = !!o.summary
         const mapping = autoMap(task.columns, summary, fromOther ? o.mapping : undefined)
         const participant = fromOther && !s[k].participant ? participantFrom(o, summary) : s[k].participant
+        const images = imagesFor(s[k], fromOther ? o : null, summary)
         const same = fromOther && task.columns.some((c) => o.mapping[c.name] && mapping[c.name] === o.mapping[c.name])
         setCopied((c) => ({ ...c, [k]: same }))
-        return { ...s, [k]: { ...s[k], summary, mapping, participant } }
+        return { ...s, [k]: { ...s[k], summary, mapping, participant, images } }
       })
     } catch (e) {
       patchSlot(k, { error: message(e) })
@@ -297,6 +299,7 @@ export function Workspace({ taskKey, mode }: { taskKey: TaskKey; mode: Setup["mo
                   summary={slots[k].summary}
                   mapping={slots[k].mapping}
                   participant={slots[k].participant}
+                  images={slots[k].images}
                   problems={attempted ? allSlotProblems[k] : {}}
                   columnMessage={columnMessage(k)}
                   onJob={(job) => onJob(k, job)}
@@ -304,6 +307,7 @@ export function Workspace({ taskKey, mode }: { taskKey: TaskKey; mode: Setup["mo
                   onReset={() => resetSlot(k)}
                   onMapping={(name, col) => patchSlot(k, { mapping: { ...slots[k].mapping, [name]: col } })}
                   onParticipant={(value) => patchSlot(k, { participant: value })}
+                  onImages={(value) => patchSlot(k, { images: value })}
                 />
                 {slots[k].error && <p className="mt-4 text-sm font-medium text-destructive">{slots[k].error}</p>}
               </section>

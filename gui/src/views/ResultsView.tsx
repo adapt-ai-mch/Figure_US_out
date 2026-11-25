@@ -195,6 +195,7 @@ function ResultsBody({ runs }: { runs: Run[] }) {
                   {rm.ci_method}, {rm.n_boot} replicates, seed {rm.random_seed}
                 </Detail>
                 <Detail label="Participants linked by">{rm.participant_link}</Detail>
+                {rm.image_column && <Detail label="Images counted from">{rm.image_column}</Detail>}
                 {rm.column_mapping && (
                   <Detail label="Columns used">
                     {Object.entries(rm.column_mapping)
@@ -244,6 +245,12 @@ function CohortCard({ run }: { run: Run }) {
           <dt className="text-sm text-muted-foreground">Total participants</dt>
           <dd className="font-heading text-4xl font-bold leading-none">{m.n_participants}</dd>
         </div>
+        {m.n_images != null && (
+          <div>
+            <dt className="text-sm text-muted-foreground">Total images</dt>
+            <dd className="font-heading text-4xl font-bold leading-none">{m.n_images}</dd>
+          </div>
+        )}
         {rows.map(([label, value]) => (
           <div key={label}>
             <dt className="text-sm text-muted-foreground">{label}</dt>
